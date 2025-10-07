@@ -7,6 +7,10 @@ st.write(
     "DIRTT: Data assimilation for Inverting Radiative Transfer models using Truths data"
 )
 
+st.write(
+    "If I make changes here do they appear in GitHub?"
+)
+
 all_users = ["Alice", "Bob", "Charly"]
 with st.container(border=True):
     users = st.multiselect("Users", all_users, default=all_users)
