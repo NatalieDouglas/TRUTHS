@@ -1,15 +1,14 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 st.title("TRUTHS")
 st.write(
     "DIRTT: Data assimilation for Inverting Radiative Transfer models using Truths data"
 )
 
-st.write(
-    "If I make changes here do they appear in GitHub?"
-)
+st.image("TRUTHSsampling.png", caption="Sunrise by the mountains")
 
 all_users = ["Alice", "Bob", "Charly"]
 with st.container(border=True):
