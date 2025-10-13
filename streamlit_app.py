@@ -10,6 +10,10 @@ st.write(
 
 st.image("TRUTHSsampling.png", caption="Sunrise by the mountains")
 
+tab1, tab2 = st.tabs(["GORT", "Semi-Discrete"])
+tab1.image("GORTvRTLSscatter.png", width='stretch')
+tab2.image("GORTvRTLSscatter.png", width='stretch')
+
 all_users = ["Alice", "Bob", "Charly"]
 with st.container(border=True):
     users = st.multiselect("Users", all_users, default=all_users)
@@ -22,4 +26,4 @@ if rolling_average:
 
 tab1, tab2 = st.tabs(["Chart", "Dataframe"])
 tab1.line_chart(data, height=250)
-tab2.dataframe(data, height=250, use_container_width=True)
+tab2.dataframe(data, height=250, width='stretch')
