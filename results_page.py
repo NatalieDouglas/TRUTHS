@@ -3,10 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-def files_for_site(site_slug: str):
+def files_for_site(site_slug: str,LAI,PCC):
     site_dir = DATA_DIR / site_slug
     timestamps_csv = site_dir / (site_slug+"_geometries.csv")
-    albedos_csv = site_dir / (site_slug+"_albedos.csv")
+    albedos_csv = site_dir / (site_slug+"LAI"+str(LAI)+"PCC"+str(PCC)+"_albedos.csv")
     return timestamps_csv, albedos_csv
 
 def parse_timestamp(series: pd.Series) -> pd.Series:
@@ -120,11 +120,24 @@ with st.sidebar:
 
     show_lines = st.toggle("Connect points with lines", value=True)
 
-    canopy_scenarios=["low LAI, low canopy cover","low LAI, high canopy cover","low LAI, low canopy cover","low LAI, high canopy cover","low LAI, high canopy cover","high LAI, high canopy cover"]
-    selected_canopy = st.selectbox("Select canopy type", canopy_scenarios)
+        LAIs=["low","high"]
+    selected_LAI = st.selectbox("Select LAI", LAIs)
+
+    PCCs=["low","high"]
+    selected_PCC = st.selectbox("Select canopy coverage", PCCs)
+
+if selected_LAI == "low":
+    LAI=1.0
+else:
+    LAI=5.0
+
+if selected_PCC == "low":
+    PCC=0.3
+else:
+    PCC=0.7
 
 # Resolve files
-timestamps_csv, albedos_csv = files_for_site(site["slug"])
+timestamps_csv, albedos_csv = files_for_site(site["slug"],LAI,PCC)
 
 # Load data
 try:
