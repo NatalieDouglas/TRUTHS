@@ -120,7 +120,7 @@ with st.sidebar:
 
     show_lines = st.toggle("Connect points with lines", value=True)
 
-        LAIs=["low","high"]
+    LAIs=["low","high"]
     selected_LAI = st.selectbox("Select LAI", LAIs)
 
     PCCs=["low","high"]
