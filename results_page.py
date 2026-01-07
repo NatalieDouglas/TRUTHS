@@ -1,12 +1,12 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
-from PIL import Image
+import matplotlib.pyplot as plt
+from pathlib import Path
 
 st.title("Results")
 
-tab1, tab2 = st.tabs(["GORT", "Semi-Discrete"])
-tab1.image("gort_brf_timeseries.png", width='stretch')
-tab1.image("gort_brf_scatter.png",width="stretch")
-tab2.image("semid_brf_timeseries.png", width='stretch')
-tab2.image("semid_brf_scatter.png", width='stretch')
+SITES = [
+    {"site": "Site01", "lat": 0.0, "lon": 10.0, "slug": "site01"},
+    {"site": "Site02", "lat": 60.0, "lon": 30.0, "slug": "site02"},
+]
+DATA_DIR = Path("data")
