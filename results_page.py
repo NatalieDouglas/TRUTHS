@@ -83,9 +83,37 @@ def get_wavelength_columns(df: pd.DataFrame):
 
     return sorted(wl_cols, key=lambda x: float(str(x)))
 
-def plot_missions(df: pd.DataFrame, wl_col, show_lines=True):
+def get_pred_albs(brfs_csv,k,ret_sel):
+    BRFs = pd.read_csv(brfs_csv)
+    if ret_sel == "TRUTHS": 
+        BRFs_mission=BRFs.loc[BRFs["mission"] == "TRUTHS"]
+    elif ret_sel == "Sentinel2":
+        BRFs_mission=BRFs.loc[BRFs["mission"] == "Sentinel2"]
+    else:
+        BRFs_mission = BRFs.copy()
+    BRFs_data = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
+    k=add_obs_brfs_to_kernelBRDF(BRFs_data.values,k)
+    weights=k.solveKernelBRDF()
+    k.predict_brfs(weights)
+    #pred_BRFs.loc[:, band_cols] = k.brf
+    #st.write(pred_BRFs)
+    #alb = pd.read_csv(albedos_csv) 
+    #alb=alb.loc[alb["mission"] == "TRUTHS"]
+    #st.write(alb)
+       
+    kbs=[]
+    for i in range(len(k.sza_arr)):
+        kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
+    pred_alb=BRFs_mission.copy()
+    band_cols = pred_alb.columns[2:]
+    pred_alb.loc[:, band_cols] = kbs
+    #st.write(pred_alb)
+    return pred_alb
+
+def make_plots(df: pd.DataFrame, wl_col, pred_alb, show_lines=True):
     truths = df.loc[df["mission"] == "TRUTHS", wl_col]
     s2     = df.loc[df["mission"] == "Sentinel2", wl_col]
+    pred_alb_wl = pred_alb[wl_col]
 
     fig, [ax,ax2] = plt.subplots(1,2, figsize=(12, 5))
 
@@ -101,16 +129,18 @@ def plot_missions(df: pd.DataFrame, wl_col, show_lines=True):
     ax.set_ylabel("Albedo")
     ax.legend()
 
-    if show_lines:
-        ax2.plot(truths.index, truths.values, "-o", label="TRUTHS")
-        ax2.plot(s2.index,     s2.values,     "-s", label="Sentinel-2")
+    if ret_sel == "TRUTHS":
+        ax2.scatter(pred_alb_wl, truths.values)
+    elif ret_sel == "Sentinel2":
+        ax2.scatter(pred_alb_wl, s2.values)
     else:
-        ax2.plot(truths.index, truths.values, "o", label="TRUTHS")
-        ax2.plot(s2.index,     s2.values,     "s", label="Sentinel-2")
-
-    ax2.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
-    ax2.set_xlabel("Time")
-    ax2.set_ylabel("Albedo")
+        ax2.scatter(pred_alb_wl, df[wl_col])
+    mn = np.nanmin([pred_alb_wl.min(), truths.values.min()])
+    mx = np.nanmax([pred_alb_wl.max(), truths.values.max()])
+    ax2.plot([mn, mx], [mn, mx], linestyle="--")
+    ax2.set_title(f"Predicted versus observed BS albedo at {wl_col} nm")
+    ax2.set_xlabel("Predicted")
+    ax2.set_ylabel("Observed")
     ax2.legend()
 
     fig.autofmt_xdate()
@@ -193,32 +223,25 @@ if not wl_cols:
 with st.sidebar:
     wl_choice = st.selectbox("Wavelength", wl_cols)
 
+    retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
+    ret_sel=st.selectbox("Retrieve with:", retrievals)
+
 # Inversion
-BRDF_filename= DATA_DIR / 'BRDF_files/TRUTHS/TRUTHSgeometries/TRUTHSgeomsLAT-10.0LON-60.0.brdf' 
+if ret_sel == "TRUTHS":
+    BRDF_filename= DATA_DIR / ('BRDF_files/TRUTHS/TRUTHSgeometries/TRUTHSgeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
+elif ret_sel == "Sentinel2":
+    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel/SentinelGeometries/SentinelGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
+else:
+    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel+TRUTHS/Sentinel+TRUTHSGeometries/Sentinel+TRUTHSGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
+
 k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
 geom_list=geom_list_from_brdfFile(k)
-BRFs = pd.read_csv(brfs_csv) 
-BRFs=BRFs.loc[BRFs["mission"] == "TRUTHS"]
-st.write(BRFs)
-pred_BRFs=BRFs.copy()
-pred_alb=BRFs.copy()
-band_cols = pred_BRFs.columns[2:]
-BRFs_data = BRFs.drop(columns=["mission",'Unnamed: 0'])
-k=add_obs_brfs_to_kernelBRDF(BRFS_data.values,k)
-weights=k.solveKernelBRDF()
-k.predict_brfs(weights)
-pred_BRFs.loc[:, band_cols] = k.brf
-st.write(pred_BRFs)
 
-kbs=[]
-for i in range(len(k.sza_arr)):
-    kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
-pred_alb.loc[:, band_cols] = kbs
-st.write(pred_alb)
+predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel)
 
 # Plot
-fig = plot_missions(df, wl_choice, show_lines=show_lines)
+fig = make_plots(df, wl_choice, predicted_albedos, show_lines=show_lines)
 st.pyplot(fig, clear_figure=True)
 
 # Optional table
