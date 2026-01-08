@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+import kernels
+from kernels import kernelBRDF
+
+def geom_list_from_brdfFile(b):
+    geom_list = []
+    for i in range(b.nAngles):
+        geom_list.append(geom(vza=b.vza_arr[i], vaa=b.vaa_arr[i], sza=b.sza_arr[i], saa=b.saa_arr[i]))
+    return geom_list 
 
 def files_for_site(site_slug: str,LAI,PCC):
     site_dir = DATA_DIR / site_slug
@@ -62,7 +70,7 @@ def plot_missions(df: pd.DataFrame, wl_col, show_lines=True):
     truths = df.loc[df["mission"] == "TRUTHS", wl_col]
     s2     = df.loc[df["mission"] == "Sentinel2", wl_col]
 
-    fig, ax = plt.subplots()
+    fig, [ax,ax2] = plt.subplots(1,2, figsize=(12, 5))
 
     if show_lines:
         ax.plot(truths.index, truths.values, "-o", label="TRUTHS")
@@ -75,6 +83,19 @@ def plot_missions(df: pd.DataFrame, wl_col, show_lines=True):
     ax.set_xlabel("Time")
     ax.set_ylabel("Albedo")
     ax.legend()
+
+    if show_lines:
+        ax2.plot(truths.index, truths.values, "-o", label="TRUTHS")
+        ax2.plot(s2.index,     s2.values,     "-s", label="Sentinel-2")
+    else:
+        ax2.plot(truths.index, truths.values, "o", label="TRUTHS")
+        ax2.plot(s2.index,     s2.values,     "s", label="Sentinel-2")
+
+    ax2.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
+    ax2.set_xlabel("Time")
+    ax2.set_ylabel("Albedo")
+    ax2.legend()
+
     fig.autofmt_xdate()
 
     return fig
@@ -154,6 +175,12 @@ if not wl_cols:
 
 with st.sidebar:
     wl_choice = st.selectbox("Wavelength", wl_cols)
+
+# Inversion
+BRDF_filename=
+k=kernelBRDF( )
+k.readBRDF(BRDF_filename)
+geom_list=geom_list_from_brdfFile(k)
 
 # Plot
 fig = plot_missions(df, wl_choice, show_lines=show_lines)
