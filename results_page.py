@@ -1,9 +1,25 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 from pathlib import Path
 import kernels
 from kernels import kernelBRDF
+from dataclasses import dataclass
+
+@dataclass
+class geom:
+    vza: float
+    vaa: float
+    sza: float
+    saa: float
+
+def add_obs_brfs_to_kernelBRDF(brfs,k):
+    for i in range( k.nAngles ):
+        for j in range( k.nWavelengths ):
+            k.brfObs[i][j]=brfs[i][j]
+
+    return k
 
 def geom_list_from_brdfFile(b):
     geom_list = []
@@ -15,7 +31,8 @@ def files_for_site(site_slug: str,LAI,PCC):
     site_dir = DATA_DIR / site_slug
     timestamps_csv = site_dir / (site_slug+"_geometries.csv")
     albedos_csv = site_dir / (site_slug+"LAI"+str(LAI)+"PCC"+str(PCC)+"_albedos.csv")
-    return timestamps_csv, albedos_csv
+    brfs_csv = site_dir / (site_slug+"LAI"+str(LAI)+"PCC"+str(PCC)+"_BRFs.csv")
+    return timestamps_csv, albedos_csv, brfs_csv
 
 def parse_timestamp(series: pd.Series) -> pd.Series:
     s = series.astype(str).str.strip()
@@ -158,7 +175,7 @@ else:
     PCC=0.7
 
 # Resolve files
-timestamps_csv, albedos_csv = files_for_site(site["slug"],LAI,PCC)
+timestamps_csv, albedos_csv, brfs_csv = files_for_site(site["slug"],LAI,PCC)
 
 # Load data
 try:
@@ -177,10 +194,28 @@ with st.sidebar:
     wl_choice = st.selectbox("Wavelength", wl_cols)
 
 # Inversion
-BRDF_filename=
+BRDF_filename= DATA_DIR / 'BRDF_files/TRUTHS/TRUTHSgeometries/TRUTHSgeomsLAT-10.0LON-60.0.brdf' 
 k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
 geom_list=geom_list_from_brdfFile(k)
+BRFs = pd.read_csv(brfs_csv) 
+BRFs=BRFs.loc[BRFs["mission"] == "TRUTHS"]
+st.write(BRFs)
+pred_BRFs=BRFs.copy()
+pred_alb=BRFs.copy()
+band_cols = pred_BRFs.columns[2:]
+BRFs_data = BRFs.drop(columns=["mission",'Unnamed: 0'])
+k=add_obs_brfs_to_kernelBRDF(BRFS_data.values,k)
+weights=k.solveKernelBRDF()
+k.predict_brfs(weights)
+pred_BRFs.loc[:, band_cols] = k.brf
+st.write(pred_BRFs)
+
+kbs=[]
+for i in range(len(k.sza_arr)):
+    kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
+pred_alb.loc[:, band_cols] = kbs
+st.write(pred_alb)
 
 # Plot
 fig = plot_missions(df, wl_choice, show_lines=show_lines)
