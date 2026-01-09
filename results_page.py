@@ -60,7 +60,10 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path):
     df = pd.concat([ts.reset_index(drop=True), alb.reset_index(drop=True)], axis=1)
 
     # Clean + index
-    df = df.dropna(subset=["datetime"]).set_index("datetime").sort_index()
+    #df = df.dropna(subset=["datetime"]).set_index("datetime").sort_index()
+    df = df.dropna(subset=["datetime"]).set_index("datetime")
+
+    #st.write(df)
 
     # Ensure numeric albedo columns
     for c in df.columns:
@@ -110,11 +113,18 @@ def get_pred_albs(brfs_csv,k,ret_sel):
     #st.write(pred_alb)
     return pred_alb
 
-def make_plots(df: pd.DataFrame, wl_col, pred_alb, show_lines=True):
-    truths = df.loc[df["mission"] == "TRUTHS", wl_col]
-    s2     = df.loc[df["mission"] == "Sentinel2", wl_col]
-    pred_alb_wl = pred_alb[wl_col]
-
+def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb, show_lines=True):
+    if wl_col == "ALL":
+        wl=all_wl
+    else:
+        wl=[wl_col]
+    
+    truths = df.loc[df["mission"] == "TRUTHS", wl]
+    s2     = df.loc[df["mission"] == "Sentinel2", wl]
+    both = df[wl]
+    pred_alb_wl = pred_alb[wl]
+    
+    #st.write(pred_alb_wl.columns)
     fig, [ax,ax2] = plt.subplots(1,2, figsize=(12, 5))
 
     if show_lines:
@@ -129,18 +139,21 @@ def make_plots(df: pd.DataFrame, wl_col, pred_alb, show_lines=True):
     ax.set_ylabel("Albedo")
     ax.legend()
 
-    if ret_sel == "TRUTHS":
-        ax2.scatter(pred_alb_wl, truths.values)
-    elif ret_sel == "Sentinel2":
-        ax2.scatter(pred_alb_wl, s2.values)
-    else:
-        ax2.scatter(pred_alb_wl, df[wl_col])
-    mn = np.nanmin([pred_alb_wl.min(), truths.values.min()])
-    mx = np.nanmax([pred_alb_wl.max(), truths.values.max()])
-    ax2.plot([mn, mx], [mn, mx], linestyle="--")
+    for w in wl:
+        if ret_sel == "TRUTHS":
+            ax2.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w)
+        elif ret_sel == "Sentinel2":
+            ax2.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w)
+        else:
+            ax2.scatter(df[w],pred_alb[w],label=w)
+    xlims=ax2.get_xlim()
+    ylims=ax2.get_ylim()
+    ax2.plot([0,1],[0,1],"--")
+    ax2.set_xlim(xlims)
+    ax2.set_ylim(ylims)
     ax2.set_title(f"Predicted versus observed BS albedo at {wl_col} nm")
-    ax2.set_xlabel("Predicted")
-    ax2.set_ylabel("Observed")
+    ax2.set_xlabel("Observed")
+    ax2.set_ylabel("Predicted")
     ax2.legend()
 
     fig.autofmt_xdate()
@@ -221,7 +234,7 @@ if not wl_cols:
     st.stop()
 
 with st.sidebar:
-    wl_choice = st.selectbox("Wavelength", wl_cols)
+    wl_choice = st.selectbox("Wavelength", ["ALL"]+wl_cols)
 
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
@@ -241,9 +254,13 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel)
 
 # Plot
-fig = make_plots(df, wl_choice, predicted_albedos, show_lines=show_lines)
+fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, show_lines=show_lines)
 st.pyplot(fig, clear_figure=True)
 
 # Optional table
 with st.expander("Show data"):
-    st.dataframe(df[["mission", wl_choice]].dropna().sort_index())
+    if wl_choice == "ALL":
+        st.dataframe(df.drop(columns='Unnamed: 0').sort_index())
+    else:
+        dontkeep = [w for w in wl_cols if w != wl_choice]
+        st.dataframe(df.drop(columns=dontkeep+['Unnamed: 0']).dropna().sort_index())
