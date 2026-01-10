@@ -42,6 +42,7 @@ def parse_timestamp(series: pd.Series) -> pd.Series:
 def load_site_data(timestamps_csv: Path, albedos_csv: Path):
     # ---- Load timestamps ----
     ts = pd.read_csv(timestamps_csv)
+    st.write(ts)
 
     if "datetime" not in ts.columns:
         raise ValueError(f"'datetime' column not found in {timestamps_csv}")
@@ -52,6 +53,7 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path):
 
     # ---- Load albedos ----
     alb = pd.read_csv(albedos_csv)
+    st.write(alb)
     if len(alb) != len(ts):
         raise ValueError(
             f"Row mismatch: albedos({len(alb)}) vs timestamps({len(ts)})"
@@ -86,15 +88,33 @@ def get_wavelength_columns(df: pd.DataFrame):
 
     return sorted(wl_cols, key=lambda x: float(str(x)))
 
-def get_pred_albs(brfs_csv,k,ret_sel):
+def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     BRFs = pd.read_csv(brfs_csv)
     if ret_sel == "TRUTHS": 
         BRFs_mission=BRFs.loc[BRFs["mission"] == "TRUTHS"]
+        BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
+        sigma_arr = rel_err_TRUTHS * np.maximum(BRFs_mission.values, eps)
     elif ret_sel == "Sentinel2":
         BRFs_mission=BRFs.loc[BRFs["mission"] == "Sentinel2"]
+        BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
+        sigma_arr = rel_err_Sentinel * np.maximum(BRFs_mission.values, eps)
     else:
         BRFs_mission = BRFs.copy()
-    BRFs_data = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
+        BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
+        sigma_arr = np.zeros_like(BRFs_mission.values, dtype=float)
+        n_truths = (BRFs["mission"] == "TRUTHS").sum()
+        n_truths = (BRFs["mission"] == "Sentinel2").sum()
+        st.write(n_truths)
+        sigma_arr[:n_truths] = rel_err_TRUTHS * np.maximum(BRFs_mission.values[:n_truths], eps)
+        sigma_arr[n_truths:] = rel_err_Sentinel * np.maximum(BRFs_mission.values[n_truths:], eps)
+    
+    rng = np.random.default_rng(42)
+    noise = rng.normal(0.0, sigma_arr)
+    #BRFs_data = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
+    BRFs_data=BRFs_mission.copy()
+    band_cols = BRFs_data.columns
+    BRFs_data.loc[:, band_cols] = BRFs_mission.values+noise
+    
     k=add_obs_brfs_to_kernelBRDF(BRFs_data.values,k)
     weights=k.solveKernelBRDF()
     k.predict_brfs(weights)
@@ -108,7 +128,6 @@ def get_pred_albs(brfs_csv,k,ret_sel):
     for i in range(len(k.sza_arr)):
         kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
     pred_alb=BRFs_mission.copy()
-    band_cols = pred_alb.columns[2:]
     pred_alb.loc[:, band_cols] = kbs
     #st.write(pred_alb)
     return pred_alb
@@ -226,7 +245,7 @@ try:
 except Exception as e:
     st.error(f"Failed to load site data: {e}")
     st.stop()
-
+st.write(df)
 wl_cols = get_wavelength_columns(df)
 if not wl_cols:
     st.error("No wavelength columns found to plot.")
@@ -239,19 +258,23 @@ with st.sidebar:
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
 
+eps = 1e-3# Avoid σ=0 when reflectance is 0
+rel_err_Sentinel=0.03 # THIS NEEDS TO BE WAVELENGHT DEPENDENT!
+rel_err_TRUTHS=0.003
+
 # Inversion
 if ret_sel == "TRUTHS":
     BRDF_filename= DATA_DIR / ('BRDF_files/TRUTHS/TRUTHSgeometries/TRUTHSgeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
 elif ret_sel == "Sentinel2":
     BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel/SentinelGeometries/SentinelGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
 else:
-    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel+TRUTHS/Sentinel+TRUTHSGeometries/Sentinel+TRUTHSGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
+    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel+TRUTHS/Sentinel+TRUTHSGeometries/Sentinel+TRUTHSGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )  
 
 k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
 geom_list=geom_list_from_brdfFile(k)
 
-predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel)
+predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
 fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, show_lines=show_lines)
