@@ -42,7 +42,6 @@ def parse_timestamp(series: pd.Series) -> pd.Series:
 def load_site_data(timestamps_csv: Path, albedos_csv: Path):
     # ---- Load timestamps ----
     ts = pd.read_csv(timestamps_csv)
-    st.write(ts)
 
     if "datetime" not in ts.columns:
         raise ValueError(f"'datetime' column not found in {timestamps_csv}")
@@ -53,7 +52,7 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path):
 
     # ---- Load albedos ----
     alb = pd.read_csv(albedos_csv)
-    st.write(alb)
+
     if len(alb) != len(ts):
         raise ValueError(
             f"Row mismatch: albedos({len(alb)}) vs timestamps({len(ts)})"
@@ -64,8 +63,6 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path):
     # Clean + index
     #df = df.dropna(subset=["datetime"]).set_index("datetime").sort_index()
     df = df.dropna(subset=["datetime"]).set_index("datetime")
-
-    #st.write(df)
 
     # Ensure numeric albedo columns
     for c in df.columns:
@@ -245,7 +242,7 @@ try:
 except Exception as e:
     st.error(f"Failed to load site data: {e}")
     st.stop()
-st.write(df)
+
 wl_cols = get_wavelength_columns(df)
 if not wl_cols:
     st.error("No wavelength columns found to plot.")
