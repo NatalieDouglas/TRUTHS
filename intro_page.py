@@ -15,4 +15,4 @@ st.write("""Accurately quantifying photosynthesis is essential for guiding clima
             to monitor photosynthesis and its role in the carbon cycle, thereby informing climate policy and improving climate predictions.""")
 
 st.image("slope.png", caption="Site locations for TRUTHS geometries", width="content")
-st.image("TRUTHSsampling.png", caption="Site locations for TRUTHS geometries", width="content")
+st.image("Images/TRUTHSsampling.png", caption="Site locations for TRUTHS geometries", width="content")

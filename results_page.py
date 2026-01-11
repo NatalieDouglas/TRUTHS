@@ -6,6 +6,7 @@ from pathlib import Path
 import kernels
 from kernels import kernelBRDF
 from dataclasses import dataclass
+from PIL import Image
 
 @dataclass
 class geom:
@@ -129,7 +130,7 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     #st.write(pred_alb)
     return pred_alb
 
-def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb, show_lines=True):
+def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, show_lines=True):
     if wl_col == "ALL":
         wl=all_wl
     else:
@@ -141,37 +142,43 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb, show_lines=True):
     pred_alb_wl = pred_alb[wl]
     
     #st.write(pred_alb_wl.columns)
-    fig, [ax0,ax1,ax,ax2] = plt.subplots(2,2, figsize=(12, 10))
+    fig, axes = plt.subplots(2,2, figsize=(12, 10))
 
-    
+    axes[0,0].imshow(Image.open(IMG_DIR / 'TRUTHSsampling.png'))
+    axes[0,0].axis("off")
+    axes[0,1].imshow(Image.open(IMG_DIR / ('ImageLAI'+str(LAI)+'PCC'+str(PCC)+'.png')),aspect="auto")
+    axes[0,1].set_aspect("auto")
+    axes[0,1].axis("off")
+    axes[0,1].margins(0)
+
     if show_lines:
-        ax.plot(truths.index, truths.values, "-o", label="TRUTHS")
-        ax.plot(s2.index,     s2.values,     "-s", label="Sentinel-2")
+        axes[1,0].plot(truths.index, truths.values, "-o", label="TRUTHS")
+        axes[1,0].plot(s2.index,     s2.values,     "-s", label="Sentinel-2")
     else:
-        ax.plot(truths.index, truths.values, "o", label="TRUTHS")
-        ax.plot(s2.index,     s2.values,     "s", label="Sentinel-2")
+        axes[1,0].plot(truths.index, truths.values, "o", label="TRUTHS")
+        axes[1,0].plot(s2.index,     s2.values,     "s", label="Sentinel-2")
 
-    ax.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Albedo")
-    ax.legend()
+    axes[1,0].set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
+    axes[1,0].set_xlabel("Time")
+    axes[1,0].set_ylabel("Albedo")
+    axes[1,0].legend()
 
     for w in wl:
         if ret_sel == "TRUTHS":
-            ax2.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w)
+            axes[1,1].scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w)
         elif ret_sel == "Sentinel2":
-            ax2.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w)
+            axes[1,1].scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w)
         else:
-            ax2.scatter(df[w],pred_alb[w],label=w)
-    xlims=ax2.get_xlim()
-    ylims=ax2.get_ylim()
-    ax2.plot([0,1],[0,1],"--")
-    ax2.set_xlim(xlims)
-    ax2.set_ylim(ylims)
-    ax2.set_title(f"Predicted versus observed BS albedo at {wl_col} nm")
-    ax2.set_xlabel("Observed")
-    ax2.set_ylabel("Predicted")
-    ax2.legend()
+            axes[1,1].scatter(df[w],pred_alb[w],label=w)
+    xlims=axes[1,1].get_xlim()
+    ylims=axes[1,1].get_ylim()
+    axes[1,1].plot([0,1],[0,1],"--")
+    axes[1,1].set_xlim(xlims)
+    axes[1,1].set_ylim(ylims)
+    axes[1,1].set_title(f"Predicted versus observed BS albedo at {wl_col} nm")
+    axes[1,1].set_xlabel("Observed")
+    axes[1,1].set_ylabel("Predicted")
+    axes[1,1].legend()
 
     fig.autofmt_xdate()
 
@@ -205,6 +212,7 @@ SITES = [
 ]
 
 DATA_DIR = Path("Data")
+IMG_DIR = Path("Images")
 
 with st.sidebar:
     st.header("Controls")
@@ -275,7 +283,7 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, show_lines=show_lines)
+fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,show_lines=show_lines)
 st.pyplot(fig, clear_figure=True)
 
 # Optional table
