@@ -141,8 +141,9 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb, show_lines=True):
     pred_alb_wl = pred_alb[wl]
     
     #st.write(pred_alb_wl.columns)
-    fig, [ax,ax2] = plt.subplots(1,2, figsize=(12, 5))
+    fig, [ax0,ax1,ax,ax2] = plt.subplots(2,2, figsize=(12, 10))
 
+    
     if show_lines:
         ax.plot(truths.index, truths.values, "-o", label="TRUTHS")
         ax.plot(s2.index,     s2.values,     "-s", label="Sentinel-2")
