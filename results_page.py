@@ -102,7 +102,6 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
         sigma_arr = np.zeros_like(BRFs_mission.values, dtype=float)
         n_truths = (BRFs["mission"] == "TRUTHS").sum()
         n_truths = (BRFs["mission"] == "Sentinel2").sum()
-        st.write(n_truths)
         sigma_arr[:n_truths] = rel_err_TRUTHS * np.maximum(BRFs_mission.values[:n_truths], eps)
         sigma_arr[n_truths:] = rel_err_Sentinel * np.maximum(BRFs_mission.values[n_truths:], eps)
     
@@ -130,11 +129,13 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     #st.write(pred_alb)
     return pred_alb
 
-def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, show_lines=True):
+def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LON,show_lines=True):
     if wl_col == "ALL":
         wl=all_wl
+        msize=2
     else:
         wl=[wl_col]
+        msize=5
     
     truths = df.loc[df["mission"] == "TRUTHS", wl]
     s2     = df.loc[df["mission"] == "Sentinel2", wl]
@@ -144,32 +145,51 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, show_l
     #st.write(pred_alb_wl.columns)
     fig, axes = plt.subplots(2,2, figsize=(12, 10))
 
-    axes[0,0].imshow(Image.open(IMG_DIR / 'TRUTHSsampling.png'))
+    axes[0,0].imshow(Image.open(IMG_DIR / ('mapLAT'+str(int(LAT))+'LON'+str(LON)+'.png')))
     axes[0,0].axis("off")
     axes[0,1].imshow(Image.open(IMG_DIR / ('ImageLAI'+str(LAI)+'PCC'+str(PCC)+'.png')),aspect="auto")
     axes[0,1].set_aspect("auto")
     axes[0,1].axis("off")
     axes[0,1].margins(0)
 
+    colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
     if show_lines:
-        axes[1,0].plot(truths.index, truths.values, "-o", label="TRUTHS")
-        axes[1,0].plot(s2.index,     s2.values,     "-s", label="Sentinel-2")
+        if wl_col == "ALL":
+            for i,w in enumerate(all_wl):
+                axes[1,0].plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
+                axes[1,0].plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
+        else:
+            w=wl_col
+            i = wl.index(w)
+            axes[1,0].plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
+            axes[1,0].plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
     else:
-        axes[1,0].plot(truths.index, truths.values, "o", label="TRUTHS")
-        axes[1,0].plot(s2.index,     s2.values,     "s", label="Sentinel-2")
-
+        if wl_col == "ALL":
+            for i,w in enumerate(all_wl):
+                axes[1,0].plot(truths.index, truths[w], "o", label="TRUTHS",markersize=2,color=colors[i])
+                axes[1,0].plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=2,color=colors[i])
+        else:
+            w=wl_col
+            i = wl.index(w)
+            axes[1,0].plot(truths.index, truths[w], "o", label="TRUTHS",markersize=5,color=colors[i])
+            axes[1,0].plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=5,color=colors[i])        
+   
     axes[1,0].set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
     axes[1,0].set_xlabel("Time")
     axes[1,0].set_ylabel("Albedo")
-    axes[1,0].legend()
+    leg = axes[1,0].legend()
+    if wl_col == "ALL":
+        leg.remove()
 
-    for w in wl:
+    #colors = [plt.cm.tab20(np.linspace(0, 1, len(wl)-1)),"gold"]
+    colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
+    for i,w in enumerate(wl):
         if ret_sel == "TRUTHS":
-            axes[1,1].scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w)
+            axes[1,1].scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
         elif ret_sel == "Sentinel2":
-            axes[1,1].scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w)
+            axes[1,1].scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
         else:
-            axes[1,1].scatter(df[w],pred_alb[w],label=w)
+            axes[1,1].scatter(df[w],pred_alb[w],label=w,color=colors[i])
     xlims=axes[1,1].get_xlim()
     ylims=axes[1,1].get_ylim()
     axes[1,1].plot([0,1],[0,1],"--")
@@ -283,7 +303,7 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,show_lines=show_lines)
+fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"],show_lines=show_lines)
 st.pyplot(fig, clear_figure=True)
 
 # Optional table
