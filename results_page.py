@@ -142,67 +142,93 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     both = df[wl]
     pred_alb_wl = pred_alb[wl]
     
-    #st.write(pred_alb_wl.columns)
-    fig, axes = plt.subplots(2,2, figsize=(12, 10))
 
-    axes[0,0].imshow(Image.open(IMG_DIR / ('mapLAT'+str(int(LAT))+'LON'+str(LON)+'.png')))
-    axes[0,0].axis("off")
-    axes[0,1].imshow(Image.open(IMG_DIR / ('ImageLAI'+str(LAI)+'PCC'+str(PCC)+'.png')),aspect="auto")
-    axes[0,1].set_aspect("auto")
-    axes[0,1].axis("off")
-    axes[0,1].margins(0)
+    #fig, axes = plt.subplots(2,2, figsize=(12, 10))
+    fig1, ax1 = plt.subplots(figsize=(4, 4))
+    ax1.imshow(Image.open(IMG_DIR / ('mapLAT'+str(int(LAT))+'LON'+str(LON)+'.png')))
+    ax1.axis("off")
+    
+    fig2, ax2 = plt.subplots(figsize=(4, 4))
+    ax2.imshow(Image.open(IMG_DIR / ('ImageLAI'+str(LAI)+'PCC'+str(PCC)+'.png')),aspect="auto")
+    ax2.set_aspect("auto")
+    ax2.axis("off")
+    ax2.margins(0)
 
+    fig3, ax3 = plt.subplots(figsize=(4, 4))
     colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
     if show_lines:
         if wl_col == "ALL":
             for i,w in enumerate(all_wl):
-                axes[1,0].plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
-                axes[1,0].plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
+                ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
+                ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
         else:
             w=wl_col
             i = wl.index(w)
-            axes[1,0].plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
-            axes[1,0].plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
+            ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
+            ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
     else:
         if wl_col == "ALL":
             for i,w in enumerate(all_wl):
-                axes[1,0].plot(truths.index, truths[w], "o", label="TRUTHS",markersize=2,color=colors[i])
-                axes[1,0].plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=2,color=colors[i])
+                ax3.plot(truths.index, truths[w], "o", label="TRUTHS",markersize=2,color=colors[i])
+                ax3.plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=2,color=colors[i])
         else:
             w=wl_col
             i = wl.index(w)
-            axes[1,0].plot(truths.index, truths[w], "o", label="TRUTHS",markersize=5,color=colors[i])
-            axes[1,0].plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=5,color=colors[i])        
+            ax3.plot(truths.index, truths[w], "o", label="TRUTHS",markersize=5,color=colors[i])
+            ax3.plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=5,color=colors[i])        
    
-    axes[1,0].set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
-    axes[1,0].set_xlabel("Time")
-    axes[1,0].set_ylabel("Albedo")
-    leg = axes[1,0].legend()
+    
+    ax3.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
+    ax3.set_xlabel("Time")
+    ax3.set_ylabel("Albedo")
+    leg = ax3.legend()
     if wl_col == "ALL":
         leg.remove()
-
-    #colors = [plt.cm.tab20(np.linspace(0, 1, len(wl)-1)),"gold"]
-    colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
+    
+    fig4, ax4 = plt.subplots(figsize=(4, 4))
     for i,w in enumerate(wl):
         if ret_sel == "TRUTHS":
-            axes[1,1].scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+            ax4.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
         elif ret_sel == "Sentinel2":
-            axes[1,1].scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+            ax4.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
         else:
-            axes[1,1].scatter(df[w],pred_alb[w],label=w,color=colors[i])
-    xlims=axes[1,1].get_xlim()
-    ylims=axes[1,1].get_ylim()
-    axes[1,1].plot([0,1],[0,1],"--")
-    axes[1,1].set_xlim(xlims)
-    axes[1,1].set_ylim(ylims)
-    axes[1,1].set_title(f"Predicted versus observed BS albedo at {wl_col} nm")
-    axes[1,1].set_xlabel("Observed")
-    axes[1,1].set_ylabel("Predicted")
-    axes[1,1].legend()
+            ax4.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+    xlims=ax4.get_xlim()
+    ylims=ax4.get_ylim()
+    ax4.plot([0,1],[0,1],"--")
+    ax4.set_xlim(xlims)
+    ax4.set_ylim(ylims)
+    ax4.set_title(f"Retrieved versus simulated BS albedo at {wl_col} nm")
+    ax4.set_xlabel("Simulated 'truth'")
+    ax4.set_ylabel("Retrieved")
+    ax4.legend()
 
-    fig.autofmt_xdate()
+    fig3.autofmt_xdate()
+    
+    col1, col2 = st.columns(2)
 
-    return fig
+    with col1:
+        st.markdown("### 🌍 Site Location")
+        st.write("This image shows the site you have selected. Latitude = "+str(LAT)+", Longitude = "+str(LON))
+        st.pyplot(fig1)
+
+    with col2:
+        st.markdown("### 🌳 Canopy Characteristics ")
+        st.write("This is how the GORT radiative transfer model views the canopy with LAI="+str(LAI)+" and PCC="+str(PCC))
+        st.pyplot(fig2)
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.markdown("### 📋 Albedo Timeseries")
+        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries.")
+        st.pyplot(fig3)
+
+    with col4:
+        st.markdown("### 📈 Inversion ")
+        st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.pyplot(fig4)
+    return 
 
 st.title("Results")
 
@@ -303,8 +329,8 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-fig = make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"],show_lines=show_lines)
-st.pyplot(fig, clear_figure=True)
+make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"],show_lines=show_lines)
+#st.pyplot(fig, clear_figure=True)
 
 # Optional table
 with st.expander("Show data"):
