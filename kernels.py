@@ -208,17 +208,19 @@ class kernelBRDF( brdfFile ):
     return np.array( K )
 
 
-  def solveKernelBRDF( self, filename=None,R ):
+  def solveKernelBRDF( self, sigma, filename=None ):
     K = self.kernelMatrix( filename )
     KW=[]
     #for i in range( self.nWavelengths ):
     #  [ kw, resd, rnk, sng ]=np.linalg.lstsq(  K, np.array(self.getObs(i)), rcond=None )
     #  KW.append( kw )
-    work1=np.dot(K.T,np.linalg.inv(R))
-    work2=np.linalg.inv(work1,np.dot(K))
-    work3=np.dot(work2,work1)
+
     for i in range( self.nWavelengths ):
-        KW.append(np.dot(work3,self.getObs(i)))
+      R=
+      work1=np.dot(K.T,np.linalg.inv(R))
+      work2=np.linalg.inv(np.dot(work1,K))
+      work3=np.dot(work2,work1)
+      KW.append(np.dot(work3,self.getObs(i)))
                   
     return np.array( KW )
 
