@@ -94,8 +94,8 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     R_TRUTHS=[]
     R_Sentinel=[]
     for i in range(0,11):
-        R_TRUTHS.append(np.diag(rel_err_TRUTHS**2*np.ones(n_truths)))
-        R_Sentinel.append(np.diag(rel_err_Sentinel**2*np.ones(n_sent)))
+        R_TRUTHS.append(np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths)))
+        R_Sentinel.append(np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent)))
     if ret_sel == "TRUTHS": 
         BRFs_mission=BRFs.loc[BRFs["mission"] == "TRUTHS"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
@@ -321,9 +321,26 @@ with st.sidebar:
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
 
+    alpha_options = {
+    "100× better (0.01)": 0.01,
+    "20× better (0.05)": 0.05,
+    "10× better (0.1)":  0.1,
+    "5× better (0.2)":   0.2,
+    "2× better (0.5)":   0.5,
+    "Same as Sentinel (1.0)": 1.0,
+}
+
+    label = st.selectbox(
+        "Assumed TRUTHS accuracy relative to Sentinel-2",
+        list(alpha_options.keys()),
+        index=2
+    )
+
+    alpha = alpha_options[label]
+
 eps = 1e-3# Avoid σ=0 when reflectance is 0
-rel_err_Sentinel=[5.95,4.13,3.49,3.77,3.56,3.35,3.32,3.35,31.5,3.55,3.57]]
-rel_err_TRUTHS=0.2*rel_err_Sentinel
+rel_err_Sentinel=np.array([0.0595,0.0413,0.0349,0.0377,0.0356,0.0335,0.0332,0.0335,0.315,0.0355,0.0357])
+rel_err_TRUTHS=alpha*rel_err_Sentinel
 
 # Inversion
 if ret_sel == "TRUTHS":

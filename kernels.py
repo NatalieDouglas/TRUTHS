@@ -208,7 +208,7 @@ class kernelBRDF( brdfFile ):
     return np.array( K )
 
 
-  def solveKernelBRDF( self, sigma, filename=None ):
+  def solveKernelBRDF( self, R_dict, filename=None ):
     K = self.kernelMatrix( filename )
     KW=[]
     #for i in range( self.nWavelengths ):
@@ -216,7 +216,7 @@ class kernelBRDF( brdfFile ):
     #  KW.append( kw )
 
     for i in range( self.nWavelengths ):
-      R=
+      R=R_dict[i]
       work1=np.dot(K.T,np.linalg.inv(R))
       work2=np.linalg.inv(np.dot(work1,K))
       work3=np.dot(work2,work1)
