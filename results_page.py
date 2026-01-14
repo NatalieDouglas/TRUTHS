@@ -7,6 +7,7 @@ import kernels
 from kernels import kernelBRDF
 from dataclasses import dataclass
 from PIL import Image
+from scipy.linalg import block_diag
 
 @dataclass
 class geom:
@@ -87,24 +88,29 @@ def get_wavelength_columns(df: pd.DataFrame):
     return sorted(wl_cols, key=lambda x: float(str(x)))
 
 def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
-    BRFs = pd.read_csv(brfs_csv)
+    BRFs = pd.read_csv(brfs_csv)        
+    n_truths = (BRFs["mission"] == "TRUTHS").sum()
+    n_sent = (BRFs["mission"] == "Sentinel2").sum()
+    R_TRUTHS=np.diag(rel_err_TRUTHS**2*np.ones(n_truths))
+    R_Sentinel=np.diag(rel_err_Sentinel**2*np.ones(n_sent))
     if ret_sel == "TRUTHS": 
         BRFs_mission=BRFs.loc[BRFs["mission"] == "TRUTHS"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = rel_err_TRUTHS * np.maximum(BRFs_mission.values, eps)
+        R=R_TRUTHS.copy()
     elif ret_sel == "Sentinel2":
         BRFs_mission=BRFs.loc[BRFs["mission"] == "Sentinel2"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = rel_err_Sentinel * np.maximum(BRFs_mission.values, eps)
+        R=R_Sentinel.copy()
     else:
         BRFs_mission = BRFs.copy()
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = np.zeros_like(BRFs_mission.values, dtype=float)
-        n_truths = (BRFs["mission"] == "TRUTHS").sum()
-        n_truths = (BRFs["mission"] == "Sentinel2").sum()
-        sigma_arr[:n_truths] = rel_err_TRUTHS * np.maximum(BRFs_mission.values[:n_truths], eps)
-        sigma_arr[n_truths:] = rel_err_Sentinel * np.maximum(BRFs_mission.values[n_truths:], eps)
-    
+        sigma_arr[:n_sent] = rel_err_Sentinel * np.maximum(BRFs_mission.values[:n_sent], eps)
+        sigma_arr[n_sent:] = rel_err_TRUTHS * np.maximum(BRFs_mission.values[n_sent:], eps)
+        R=block_diag(R_TRUTHS,R_Sentinel)
+        
     rng = np.random.default_rng(42)
     noise = rng.normal(0.0, sigma_arr)
     #BRFs_data = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
@@ -113,7 +119,7 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     BRFs_data.loc[:, band_cols] = BRFs_mission.values+noise
     
     k=add_obs_brfs_to_kernelBRDF(BRFs_data.values,k)
-    weights=k.solveKernelBRDF()
+    weights=k.solveKernelBRDF(R)
     k.predict_brfs(weights)
     #pred_BRFs.loc[:, band_cols] = k.brf
     #st.write(pred_BRFs)
