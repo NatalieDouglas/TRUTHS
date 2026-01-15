@@ -164,46 +164,32 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     ax2.set_aspect("auto")
     ax2.axis("off")
     ax2.margins(0)
-
+    
     fig3, ax3 = plt.subplots(figsize=(4, 4))
+    ax3.imshow(Image.open(IMG_DIR / ('polar_plots/'+'angular_sampling_LAT'+str(LAT)+'LON'+str(LON)+'.png')))
+    ax3.axis("off")
+
+    fig4, ax4 = plt.subplots(figsize=(4, 4))
     colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
 
     if wl_col == "ALL":
         for i,w in enumerate(all_wl):
-            ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
-            ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
+            ax4.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
+            ax4.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
     else:
         w=wl_col
         i = wl.index(w)
-        ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
-        ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
+        ax4.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
+        ax4.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
 
-    ax3.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
-    ax3.set_xlabel("Time")
-    ax3.set_ylabel("Albedo")
-    leg = ax3.legend()
+    ax4.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
+    ax4.set_xlabel("Time")
+    ax4.set_ylabel("Albedo")
+    leg = ax4.legend()
     if wl_col == "ALL":
         leg.remove()
 
-    fig3.autofmt_xdate()
-    
-    fig4, ax4 = plt.subplots(figsize=(4, 4))
-    for i,w in enumerate(wl):
-        if ret_sel == "TRUTHS":
-            ax4.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
-        elif ret_sel == "Sentinel2":
-            ax4.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
-        else:
-            ax4.scatter(df[w],pred_alb[w],label=w,color=colors[i])
-    xlims=ax4.get_xlim()
-    ylims=ax4.get_ylim()
-    ax4.plot([0,1],[0,1],"--")
-    ax4.set_xlim(xlims)
-    ax4.set_ylim(ylims)
-    ax4.set_title(f"Retrieved versus simulated BS albedo at {wl_col} nm")
-    ax4.set_xlabel("Simulated 'truth'")
-    ax4.set_ylabel("Retrieved")
-    ax4.legend()
+    fig4.autofmt_xdate()
 
     fig5, ax5 = plt.subplots(figsize=(4, 4))
     for i,w in enumerate(wl):
@@ -256,15 +242,14 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     col3, col4 = st.columns(2)
 
     with col3:
-        st.markdown("### 📋 Albedo Timeseries")
-        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries.")
+        st.markdown("### ☀️ Solar Zenith Angular Sampling")
+        st.write("The distribution of solar zenith angles for the available TRUTHS and Sentinel-2 solar and viewing geometries.")
         st.pyplot(fig3)
 
     with col4:
-        st.markdown("### 📈 Inversion ")
-        st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.markdown("### 📋 Albedo Timeseries")
+        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries.")
         st.pyplot(fig4)
-    return 
 
     col5, col6 = st.columns(2)
 
@@ -274,7 +259,7 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
         st.pyplot(fig5)
 
     with col6:
-        st.markdown("### 📈 Albedos ")
+        st.markdown("### ✨ Albedos ")
         st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
         st.pyplot(fig6)
     return 
