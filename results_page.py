@@ -140,7 +140,7 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     #st.write(pred_alb)
     return pred_alb
 
-def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LON,show_lines=True):
+def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LON):
     if wl_col == "ALL":
         wl=all_wl
         msize=2
@@ -167,28 +167,17 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
 
     fig3, ax3 = plt.subplots(figsize=(4, 4))
     colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
-    if show_lines:
-        if wl_col == "ALL":
-            for i,w in enumerate(all_wl):
-                ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
-                ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
-        else:
-            w=wl_col
-            i = wl.index(w)
-            ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
-            ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
+
+    if wl_col == "ALL":
+        for i,w in enumerate(all_wl):
+            ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
+            ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
     else:
-        if wl_col == "ALL":
-            for i,w in enumerate(all_wl):
-                ax3.plot(truths.index, truths[w], "o", label="TRUTHS",markersize=2,color=colors[i])
-                ax3.plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=2,color=colors[i])
-        else:
-            w=wl_col
-            i = wl.index(w)
-            ax3.plot(truths.index, truths[w], "o", label="TRUTHS",markersize=5,color=colors[i])
-            ax3.plot(s2.index,     s2[w],     "s", label="Sentinel-2",markersize=5,color=colors[i])        
-   
-    
+        w=wl_col
+        i = wl.index(w)
+        ax3.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
+        ax3.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
+
     ax3.set_title(f"Black Sky Spectral Albedo at {wl_col} nm")
     ax3.set_xlabel("Time")
     ax3.set_ylabel("Albedo")
@@ -281,8 +270,6 @@ with st.sidebar:
 
     st.caption(f"Lat/Lon: {site['lat']:.1f}, {site['lon']:.1f}")
 
-    show_lines = st.toggle("Connect points with lines", value=True)
-
     LAIs=["low","high"]
     selected_LAI = st.selectbox("Select LAI", LAIs)
 
@@ -322,12 +309,10 @@ with st.sidebar:
     ret_sel=st.selectbox("Retrieve with:", retrievals)
 
     alpha_options = {
-    "100× better (0.01)": 0.01,
-    "20× better (0.05)": 0.05,
-    "10× better (0.1)":  0.1,
-    "5× better (0.2)":   0.2,
-    "2× better (0.5)":   0.5,
-    "Same as Sentinel (1.0)": 1.0,
+    "10 × better (0.1)":  0.1,
+    "5 × better (0.2)":   0.2,
+    "2 × better (0.5)":   0.5,
+    "Same as Sentinel-2 (1.0)": 1.0,
 }
 
     label = st.selectbox(
@@ -357,7 +342,7 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"],show_lines=show_lines)
+make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"])
 #st.pyplot(fig, clear_figure=True)
 
 # Optional table
