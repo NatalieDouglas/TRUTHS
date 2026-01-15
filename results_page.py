@@ -76,11 +76,13 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path, reflectances_csv: Pa
     # Clean + index
     #df = df.dropna(subset=["datetime"]).set_index("datetime").sort_index()
     df = df.dropna(subset=["datetime"]).set_index("datetime")
+    df_ref = df_ref.dropna(subset=["datetime"]).set_index("datetime")
 
     # Ensure numeric albedo columns
     for c in df.columns:
         if c != "mission":
             df[c] = pd.to_numeric(df[c], errors="ignore")
+            df_ref[c] = pd.to_numeric(df_ref[c], errors="ignore")
 
     return df, df_ref
 
@@ -149,20 +151,22 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     pred_alb=BRFs_mission.copy()
     pred_alb.loc[:, band_cols] = kbs
     #st.write(pred_alb)
-    return pred_alb
+    return BRFs_data, pred_alb
 
-def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LON):
+def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,LAI,PCC,IMG_DIR, LAT,LON):
     if wl_col == "ALL":
         wl=all_wl
-        msize=2
+    #    msize=2
     else:
         wl=[wl_col]
-        msize=5
+    #    msize=5
     
+    #truths = df.loc[df["mission"] == "TRUTHS"]
+    #s2     = df.loc[df["mission"] == "Sentinel2"]
     truths = df.loc[df["mission"] == "TRUTHS", wl]
     s2     = df.loc[df["mission"] == "Sentinel2", wl]
-    both = df[wl]
-    pred_alb_wl = pred_alb[wl]
+    #both = df[wl]
+    #pred_alb_wl = pred_alb[wl]
     
 
     #fig, axes = plt.subplots(2,2, figsize=(12, 10))
@@ -184,12 +188,12 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
 
     if wl_col == "ALL":
-        for i,w in enumerate(all_wl):
-            ax4.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=2,color=colors[i])
-            ax4.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=2,color=colors[i])
+        for i,w in enumerate(wl):
+            ax4.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=3,color=colors[i])
+            ax4.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=3,color=colors[i])
     else:
-        w=wl_col
-        i = wl.index(w)
+        w=[wl_col]
+        i = all_wl.index(w[0])
         ax4.plot(truths.index, truths[w], "-o", label="TRUTHS",markersize=5,color=colors[i])
         ax4.plot(s2.index,     s2[w],     "-s", label="Sentinel-2",markersize=5,color=colors[i])        
 
@@ -203,31 +207,51 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     fig4.autofmt_xdate()
 
     fig5, ax5 = plt.subplots(figsize=(4, 4))
-    for i,w in enumerate(wl):
+    if wl_col == "ALL":
+        for i,w in enumerate(wl):
+            if ret_sel == "TRUTHS":
+                ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors[i])
+            elif ret_sel == "Sentinel2":
+                ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors[i])
+            else:
+                ax5.scatter(df1[w],pred_ref[w],label=w,color=colors[i])
+    else:
+        w=[wl_col]
+        i = all_wl.index(w[0])
         if ret_sel == "TRUTHS":
-            ax5.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+            ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=float(w[0]),color=colors[i])
         elif ret_sel == "Sentinel2":
-            ax5.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+            ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=float(w[0]),color=colors[i])
         else:
-            ax5.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+            ax5.scatter(df1[w],pred_ref[w],label=float(w[0]),color=colors[i])
     xlims=ax5.get_xlim()
     ylims=ax5.get_ylim()
     ax5.plot([0,1],[0,1],"--")
     ax5.set_xlim(xlims)
     ax5.set_ylim(ylims)
-    ax5.set_title(f"Retrieved versus simulated BS albedo at {wl_col} nm")
+    ax5.set_title(f"Retrieved versus simulated reflectance at {wl_col} nm")
     ax5.set_xlabel("Simulated 'truth'")
     ax5.set_ylabel("Retrieved")
     ax5.legend()
 
     fig6, ax6 = plt.subplots(figsize=(4, 4))
-    for i,w in enumerate(wl):
+    if wl_col == "ALL":
+        for i,w in enumerate(wl):
+            if ret_sel == "TRUTHS":
+                ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+            elif ret_sel == "Sentinel2":
+                ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+            else:
+                ax6.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+    else:
+        w=[wl_col]
+        i = all_wl.index(w[0])
         if ret_sel == "TRUTHS":
-            ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+            ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=float(w[0]),color=colors[i])
         elif ret_sel == "Sentinel2":
-            ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+            ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=float(w[0]),color=colors[i])
         else:
-            ax6.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+            ax6.scatter(df[w],pred_alb[w],label=float(w[0]),color=colors[i])
     xlims=ax6.get_xlim()
     ylims=ax6.get_ylim()
     ax6.plot([0,1],[0,1],"--")
@@ -259,19 +283,19 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
 
     with col4:
         st.markdown("### 📋 Albedo Timeseries")
-        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries.")
+        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries. No noise is added at this stage.")
         st.pyplot(fig4)
 
     col5, col6 = st.columns(2)
 
     with col5:
         st.markdown("### 📈 Inversion ")
-        st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.write("Simulated GORT reflectances versus the reflectances retrieved from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
         st.pyplot(fig5)
 
     with col6:
         st.markdown("### ✨ Albedos ")
-        st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.write("Simulated GORT black sky albedos versus simulated albedos using the Ross-Thick Li-Sparse linear kernels model.")
         st.pyplot(fig6)
     return 
 
@@ -384,10 +408,10 @@ k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
 geom_list=geom_list_from_brdfFile(k)
 
-predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
+predicted_refs, predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-make_plots(df, wl_choice, wl_cols, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"])
+make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"])
 #st.pyplot(fig, clear_figure=True)
 
 # Optional table
