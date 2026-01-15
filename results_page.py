@@ -153,7 +153,19 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     #st.write(pred_alb)
     return BRFs_data, pred_alb
 
-def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,LAI,PCC,IMG_DIR, LAT,LON):
+def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,LAI,PCC,IMG_DIR, LAT,LON,hide):
+    
+    colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
+
+    if hide:
+        hide_wl = [w for w in all_wl if w != "945.1"]
+        colors_hide = ["blue","orange","green","red","purple","brown","pink","olive","cyan","gold"]
+
+    else:
+        hide_wl=all_wl
+        colors_hide = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
+    
+    
     if wl_col == "ALL":
         wl=all_wl
     #    msize=2
@@ -185,7 +197,6 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     ax3.axis("off")
 
     fig4, ax4 = plt.subplots(figsize=(4, 4))
-    colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
 
     if wl_col == "ALL":
         for i,w in enumerate(wl):
@@ -208,13 +219,13 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
 
     fig5, ax5 = plt.subplots(figsize=(4, 4))
     if wl_col == "ALL":
-        for i,w in enumerate(wl):
+        for i,w in enumerate(hide_wl):
             if ret_sel == "TRUTHS":
-                ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors[i])
+                ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors_hide[i])
             elif ret_sel == "Sentinel2":
-                ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors[i])
+                ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors_hide[i])
             else:
-                ax5.scatter(df1[w],pred_ref[w],label=w,color=colors[i])
+                ax5.scatter(df1[w],pred_ref[w],label=w,color=colors_hide[i])
     else:
         w=[wl_col]
         i = all_wl.index(w[0])
@@ -236,13 +247,13 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
 
     fig6, ax6 = plt.subplots(figsize=(4, 4))
     if wl_col == "ALL":
-        for i,w in enumerate(wl):
+        for i,w in enumerate(hide_wl):
             if ret_sel == "TRUTHS":
-                ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+                ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors_hide[i])
             elif ret_sel == "Sentinel2":
-                ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+                ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors_hide[i])
             else:
-                ax6.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+                ax6.scatter(df[w],pred_alb[w],label=w,color=colors_hide[i])
     else:
         w=[wl_col]
         i = all_wl.index(w[0])
@@ -373,6 +384,9 @@ if not wl_cols:
 
 with st.sidebar:
     wl_choice = st.selectbox("Wavelength", ["ALL"]+wl_cols)
+    hide_bad_wl = False
+    if wl_choice == "ALL":
+        hide_bad_wl = st.checkbox("Hide 945.1?",value=False)
 
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
@@ -411,7 +425,7 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_refs, predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"])
+make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
 #st.pyplot(fig, clear_figure=True)
 
 # Optional table
