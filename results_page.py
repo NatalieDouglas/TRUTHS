@@ -184,6 +184,8 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     leg = ax3.legend()
     if wl_col == "ALL":
         leg.remove()
+
+    fig3.autofmt_xdate()
     
     fig4, ax4 = plt.subplots(figsize=(4, 4))
     for i,w in enumerate(wl):
@@ -203,7 +205,41 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
     ax4.set_ylabel("Retrieved")
     ax4.legend()
 
-    fig3.autofmt_xdate()
+    fig5, ax5 = plt.subplots(figsize=(4, 4))
+    for i,w in enumerate(wl):
+        if ret_sel == "TRUTHS":
+            ax5.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+        elif ret_sel == "Sentinel2":
+            ax5.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+        else:
+            ax5.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+    xlims=ax5.get_xlim()
+    ylims=ax5.get_ylim()
+    ax5.plot([0,1],[0,1],"--")
+    ax5.set_xlim(xlims)
+    ax5.set_ylim(ylims)
+    ax5.set_title(f"Retrieved versus simulated BS albedo at {wl_col} nm")
+    ax5.set_xlabel("Simulated 'truth'")
+    ax5.set_ylabel("Retrieved")
+    ax5.legend()
+
+    fig6, ax6 = plt.subplots(figsize=(4, 4))
+    for i,w in enumerate(wl):
+        if ret_sel == "TRUTHS":
+            ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors[i])
+        elif ret_sel == "Sentinel2":
+            ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors[i])
+        else:
+            ax6.scatter(df[w],pred_alb[w],label=w,color=colors[i])
+    xlims=ax6.get_xlim()
+    ylims=ax6.get_ylim()
+    ax6.plot([0,1],[0,1],"--")
+    ax6.set_xlim(xlims)
+    ax6.set_ylim(ylims)
+    ax6.set_title(f"Retrieved versus simulated BS albedo at {wl_col} nm")
+    ax6.set_xlabel("Simulated 'truth'")
+    ax6.set_ylabel("Retrieved")
+    ax6.legend()
     
     col1, col2 = st.columns(2)
 
@@ -228,6 +264,19 @@ def make_plots(df: pd.DataFrame, wl_col, all_wl,pred_alb,LAI,PCC,IMG_DIR, LAT,LO
         st.markdown("### 📈 Inversion ")
         st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
         st.pyplot(fig4)
+    return 
+
+    col5, col6 = st.columns(2)
+
+    with col5:
+        st.markdown("### 📈 Inversion ")
+        st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.pyplot(fig5)
+
+    with col6:
+        st.markdown("### 📈 Albedos ")
+        st.write("Simulated GORT black sky albedos versus the alebdos retrived from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.pyplot(fig6)
     return 
 
 st.title("Results")
