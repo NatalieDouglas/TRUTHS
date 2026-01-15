@@ -41,7 +41,7 @@ def parse_timestamp(series: pd.Series) -> pd.Series:
     return pd.to_datetime(s, errors="coerce")
 
 @st.cache_data(show_spinner=False)
-def load_site_data(timestamps_csv: Path, albedos_csv: Path):
+def load_site_data(timestamps_csv: Path, albedos_csv: Path, reflectances_csv: Path):
     # ---- Load timestamps ----
     ts = pd.read_csv(timestamps_csv)
 
@@ -60,8 +60,19 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path):
             f"Row mismatch: albedos({len(alb)}) vs timestamps({len(ts)})"
         )
     alb = alb.drop(columns=["mission",'Unnamed: 0'])
-    df = pd.concat([ts.reset_index(drop=True), alb.reset_index(drop=True)], axis=1)
 
+    # ---- Load reflectances ----
+    ref = pd.read_csv(reflectances_csv)
+
+    if len(ref) != len(ts):
+        raise ValueError(
+            f"Row mismatch: reflectances({len(ref)}) vs timestamps({len(ts)})"
+        )
+    ref = ref.drop(columns=["mission",'Unnamed: 0'])
+    
+    df = pd.concat([ts.reset_index(drop=True), alb.reset_index(drop=True)], axis=1)
+    df_ref = pd.concat([ts.reset_index(drop=True), ref.reset_index(drop=True)], axis=1)
+    
     # Clean + index
     #df = df.dropna(subset=["datetime"]).set_index("datetime").sort_index()
     df = df.dropna(subset=["datetime"]).set_index("datetime")
@@ -71,7 +82,7 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path):
         if c != "mission":
             df[c] = pd.to_numeric(df[c], errors="ignore")
 
-    return df
+    return df, df_ref
 
 def get_wavelength_columns(df: pd.DataFrame):
     wl_cols = []
@@ -325,7 +336,7 @@ timestamps_csv, albedos_csv, brfs_csv = files_for_site(site["slug"],LAI,PCC)
 
 # Load data
 try:
-    df = load_site_data(timestamps_csv, albedos_csv)
+    df, df_ref = load_site_data(timestamps_csv, albedos_csv, brfs_csv)
 except Exception as e:
     st.error(f"Failed to load site data: {e}")
     st.stop()
