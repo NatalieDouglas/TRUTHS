@@ -187,7 +187,7 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     ax1.axis("off")
     
     fig2, ax2 = plt.subplots(figsize=(4, 4))
-    ax2.imshow(Image.open(IMG_DIR / ('ImageLAI'+str(LAI)+'PCC'+str(PCC)+'.png')),aspect="auto")
+    ax2.imshow(Image.open(IMG_DIR / ('Canopies/ImageLAI'+str(LAI)+'PCC'+str(PCC)+'.png')),aspect="auto")
     ax2.set_aspect("auto")
     ax2.axis("off")
     ax2.margins(0)
