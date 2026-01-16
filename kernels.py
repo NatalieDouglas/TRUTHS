@@ -222,7 +222,7 @@ class kernelBRDF( brdfFile ):
       work3=np.dot(work2,work1)
       KW.append(np.dot(work3,self.getObs(i)))
                   
-    return np.array( KW )
+    return np.array( KW ),np.array( K )
 
 #  def WeightsOfDetermination( self, filename=None, obserr ):
 #    K = self.kernelMatrix( filename )

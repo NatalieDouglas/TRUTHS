@@ -137,23 +137,25 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     BRFs_data.loc[:, band_cols] = BRFs_mission.values+noise
     
     k=add_obs_brfs_to_kernelBRDF(BRFs_data.values,k)
-    weights=k.solveKernelBRDF(R)
+    weights,K=k.solveKernelBRDF(R)
     k.predict_brfs(weights)
-    #pred_BRFs.loc[:, band_cols] = k.brf
-    #st.write(pred_BRFs)
-    #alb = pd.read_csv(albedos_csv) 
-    #alb=alb.loc[alb["mission"] == "TRUTHS"]
-    #st.write(alb)
-       
+    
+    # get standard deviations
+    ref_std=[]
+    for i in range(0,11):
+        work0=np.dot(K.T,np.dot(np.linalg.inv(R[i]),K))
+        ref_cov=np.dot(np.dot(K,np.linalg.inv(work0)),K.T)
+        ref_std.append(np.sqrt(np.diag(ref_cov)))
+    
     kbs=[]
     for i in range(len(k.sza_arr)):
         kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
     pred_alb=BRFs_mission.copy()
     pred_alb.loc[:, band_cols] = kbs
     #st.write(pred_alb)
-    return BRFs_data, pred_alb
+    return BRFs_data, pred_alb, ref_std
 
-def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,LAI,PCC,IMG_DIR, LAT,LON,hide):
+def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,ref_std,LAI,PCC,IMG_DIR, LAT,LON,hide):
     
     colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
 
@@ -221,20 +223,29 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     if wl_col == "ALL":
         for i,w in enumerate(hide_wl):
             if ret_sel == "TRUTHS":
-                ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors_hide[i])
+                #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors_hide[i])
+                ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w[0]))
             elif ret_sel == "Sentinel2":
-                ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors_hide[i])
+                #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors_hide[i])
+                ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w[0]))
             else:
-                ax5.scatter(df1[w],pred_ref[w],label=w,color=colors_hide[i])
+                #ax5.scatter(df1[w],pred_ref[w],label=w,color=colors_hide[i])
+                ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w[0]))
+
     else:
         w=[wl_col]
         i = all_wl.index(w[0])
         if ret_sel == "TRUTHS":
-            ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=float(w[0]),color=colors[i])
+            #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=float(w[0]),color=colors[i])
+            ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w[0]))
         elif ret_sel == "Sentinel2":
-            ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=float(w[0]),color=colors[i])
+            #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=float(w[0]),color=colors[i])
+            ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w[0]))
+
         else:
-            ax5.scatter(df1[w],pred_ref[w],label=float(w[0]),color=colors[i])
+            #ax5.scatter(df1[w],pred_ref[w],label=float(w[0]),color=colors[i])
+            ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w[0]))
+
     xlims=ax5.get_xlim()
     ylims=ax5.get_ylim()
     ax5.plot([0,1],[0,1],"--")
@@ -313,6 +324,7 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
 st.title("Results")
 
 SITES = [
+    {"site": "LAT: 0.0, LON: -60.0", "lat": 0.0, "lon": -60.0, "slug": "LAT0.0LON-60.0"},
     {"site": "LAT: 40.0, LON: -120.0", "lat": 40.0, "lon": -120.0, "slug": "LAT40.0LON-120.0"},
     {"site": "LAT: 50.0, LON: -120.0", "lat": 50.0, "lon": -120.0, "slug": "LAT50.0LON-120.0"},
     {"site": "LAT: 60.0, LON: -120.0", "lat": 60.0, "lon": -120.0, "slug": "LAT60.0LON-120.0"},
@@ -320,7 +332,6 @@ SITES = [
     {"site": "LAT: -30.0, LON: -60.0", "lat": -30.0, "lon": -60.0, "slug": "LAT-30.0LON-60.0"},
     {"site": "LAT: -20.0, LON: -60.0", "lat": -20.0, "lon": -60.0, "slug": "LAT-20.0LON-60.0"},
     {"site": "LAT: -10.0, LON: -60.0", "lat": -10.0, "lon": -60.0, "slug": "LAT-10.0LON-60.0"},
-     {"site": "LAT: 0.0, LON: -60.0", "lat": 0.0, "lon": -60.0, "slug": "LAT0.0LON-60.0"},
     {"site": "LAT: 10.0, LON: 0.0", "lat": 10.0, "lon": 0.0, "slug": "LAT10.0LON0.0"},
     {"site": "LAT: 20.0, LON: 0.0", "lat": 20.0, "lon": 0.0, "slug": "LAT20.0LON0.0"},
     {"site": "LAT: 30.0, LON: 0.0", "lat": 30.0, "lon": 0.0, "slug": "LAT30.0LON0.0"},
@@ -424,10 +435,10 @@ k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
 geom_list=geom_list_from_brdfFile(k)
 
-predicted_refs, predicted_albedos=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
+predicted_refs, predicted_albedos, ref_std=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
+make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, ref_std, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
 #st.pyplot(fig, clear_figure=True)
 
 # Optional table
