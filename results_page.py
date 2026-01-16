@@ -391,24 +391,26 @@ with st.sidebar:
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
 
-    alpha_options = {
-    "10 × better (0.1)":  0.1,
-    "5 × better (0.2)":   0.2,
-    "2 × better (0.5)":   0.5,
-    "Same as Sentinel-2 (1.0)": 1.0,
-}
-
-    label = st.selectbox(
-        "Assumed TRUTHS accuracy relative to Sentinel-2",
-        list(alpha_options.keys()),
-        index=2
+    truths_acc = st.slider(
+    "TRUTHS radiometric accuracy (%)",
+    min_value=0.1,
+    max_value=5.0,
+    value=1.0,
+    step=0.1
+    )
+ 
+    alpha = st.slider(
+    "Improvement to Sentinel (X)",
+    min_value=1.0,
+    max_value=10.0,
+    value=1.0,
+    step=0.5
     )
 
-    alpha = alpha_options[label]
-
 eps = 1e-3# Avoid σ=0 when reflectance is 0
-rel_err_Sentinel=np.array([0.0595,0.0413,0.0349,0.0377,0.0356,0.0335,0.0332,0.0335,0.315,0.0355,0.0357])
-rel_err_TRUTHS=alpha*rel_err_Sentinel
+rel_err_Sentinel=(1/alpha)*np.array([0.0595,0.0413,0.0349,0.0377,0.0356,0.0335,0.0332,0.0335,0.315,0.0355,0.0357])
+#rel_err_TRUTHS=alpha*rel_err_Sentinel
+rel_err_TRUTHS=(truths_acc/100)*np.ones(11)
 
 # Inversion
 if ret_sel == "TRUTHS":
@@ -438,37 +440,30 @@ with st.expander("Show data"):
 
 
 st.divider()
-st.subheader("Sentinel-2 uncertainty settings (fixed)")
-st.markdown(
-    """
-    The Sentinel-2 observation uncertainties used in this app are specified following:
+st.subheader("Sentinel-2 uncertainty settings")
 
-    👉 **Source:** [Sentinel-2 Radiometric Performance Documentation](https://ieeexplore.ieee.org/document/10613854)
-
-    These values are **fixed** and do not change with the UI settings.
-    """
-)
 # Example structure — replace values with YOUR spec
 s2_sigma_rows = [
-    {"Band": "B2",  "λ (nm)": 492.4,  "Std dev (reflectance)": 5.95},
-    {"Band":"B3",  "λ (nm)": 559.8,  "Std dev (reflectance)": 4.13},
-    {"Band": "B4", "λ (nm)": 664.6,  "Std dev (reflectance)": 3.49},
-    {"Band":"B5", "λ (nm)": 704.1,  "Std dev (reflectance)": 3.77},
-    {"Band":"B6",  "λ (nm)": 740.5,  "Std dev (reflectance)": 3.56},
-    {"Band": "B7", "λ (nm)": 782.8,  "Std dev (reflectance)": 3.35},
-    {"Band":"B8", "λ (nm)": 832.8,  "Std dev (reflectance)": 3.32},
-    {"Band": "B8A","λ (nm)": 864.7,  "Std dev (reflectance)": 3.35},
-    {"Band":"B9", "λ (nm)": 945.1, "Std dev (reflectance)": 31.5},
-    {"Band":"B11", "λ (nm)": 1613.7, "Std dev (reflectance)": 3.55},
-    {"Band":"B12", "λ (nm)": 2202.4, "Std dev (reflectance)": 3.57},
+    {"Band": "B2",  "λ (nm)": 492.4,  "Std dev (default)": 5.95, "Std dev (updated)": (1.0/alpha)*5.95},
+    {"Band":"B3",  "λ (nm)": 559.8,  "Std dev (default)": 4.13, "Std dev (updated)": (1.0/alpha)*4.13},
+    {"Band": "B4", "λ (nm)": 664.6,  "Std dev (default)": 3.49, "Std dev (updated)": (1.0/alpha)*3.48},
+    {"Band":"B5", "λ (nm)": 704.1,  "Std dev (default)": 3.77, "Std dev (updated)": (1.0/alpha)*3.77},
+    {"Band":"B6",  "λ (nm)": 740.5,  "Std dev (default)": 3.56, "Std dev (updated)": (1.0/alpha)*3.56},
+    {"Band": "B7", "λ (nm)": 782.8,  "Std dev (default)": 3.35, "Std dev (updated)": (1.0/alpha)*3.35},
+    {"Band":"B8", "λ (nm)": 832.8,  "Std dev (default)": 3.32, "Std dev (updated)": (1.0/alpha)*3.32},
+    {"Band": "B8A","λ (nm)": 864.7,  "Std dev (default)": 3.35, "Std dev (updated)": (1.0/alpha)*3.35},
+    {"Band":"B9", "λ (nm)": 945.1, "Std dev (default)": 31.5, "Std dev (updated)": (1.0/alpha)*31.5},
+    {"Band":"B11", "λ (nm)": 1613.7, "Std dev (default)": 3.55, "Std dev (updated)": (1.0/alpha)*3.55},
+    {"Band":"B12", "λ (nm)": 2202.4, "Std dev (default)": 3.57, "Std dev (updated)": (1.0/alpha)*3.57}
 ]
 
 s2_sigma_df = pd.DataFrame(s2_sigma_rows)
-
+s2_sigma_df = s2_sigma_df.reset_index(drop=True)
 # Make it look tidy
 s2_sigma_df["λ (nm)"] = s2_sigma_df["λ (nm)"].map(lambda x: f"{x:.1f}")
-s2_sigma_df["Std dev (reflectance)"] = s2_sigma_df["Std dev (reflectance)"].map(lambda x: f"{x:.2f}")
+s2_sigma_df["Std dev (default)"] = s2_sigma_df["Std dev (default)"].map(lambda x: f"{x:.2f}")
+s2_sigma_df["Std dev (updated)"] = s2_sigma_df["Std dev (updated)"].map(lambda x: f"{x:.3f}")
 
 # Static table (won’t change/scroll like dataframe)
-s2_sigma_df = s2_sigma_df.reset_index(drop=True)
+#s2_sigma_df = s2_sigma_df.reset_index(drop=True)
 st.table(s2_sigma_df)
