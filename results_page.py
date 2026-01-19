@@ -224,27 +224,27 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
         for i,w in enumerate(hide_wl):
             if ret_sel == "TRUTHS":
                 #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors_hide[i])
-                ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w[0]))
+                ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
             elif ret_sel == "Sentinel2":
                 #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors_hide[i])
-                ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w[0]))
+                ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
             else:
                 #ax5.scatter(df1[w],pred_ref[w],label=w,color=colors_hide[i])
-                ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w[0]))
+                ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
 
     else:
         w=[wl_col]
         i = all_wl.index(w[0])
         if ret_sel == "TRUTHS":
             #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=float(w[0]),color=colors[i])
-            ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w[0]))
+            ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
         elif ret_sel == "Sentinel2":
             #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=float(w[0]),color=colors[i])
-            ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w[0]))
+            ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
 
         else:
             #ax5.scatter(df1[w],pred_ref[w],label=float(w[0]),color=colors[i])
-            ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w[0]))
+            ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
 
     xlims=ax5.get_xlim()
     ylims=ax5.get_ylim()
@@ -300,12 +300,12 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
 
     with col3:
         st.markdown("### ☀️ Solar Zenith Angular Sampling")
-        st.write("The distribution of solar zenith angles for the available TRUTHS and Sentinel-2 solar and viewing geometries.")
+        st.write("The distribution of solar zenith and relative azimuth angles for the available TRUTHS and Sentinel-2 solar and viewing geometries. TRUTHS solar geometries can be seen in red and Sentinel2 in blue.")
         st.pyplot(fig3)
 
     with col4:
         st.markdown("### 📋 Albedo Timeseries")
-        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries. No noise is added at this stage.")
+        st.write("The black sky spectral albedos (calculated by GORT) for the available TRUTHS and Sentinel-2 solar and viewing geometries. No noise is added at this stage. TRUTHS albedos are shown as dots and Sentinel-2 as squares for different wavelengths.")
         st.pyplot(fig4)
 
     col5, col6 = st.columns(2)
