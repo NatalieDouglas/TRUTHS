@@ -351,6 +351,13 @@ SITES = [
 DATA_DIR = Path("Data")
 IMG_DIR = Path("Images")
 
+def reset_acc_defaults():
+    st.session_state["truths_acc"] = 1.0
+    st.session_state["alpha"] = 1.0
+
+st.session_state.setdefault("truths_acc", 1.0)
+st.session_state.setdefault("alpha", 1.0)
+
 with st.sidebar:
     st.header("Controls")
 
@@ -359,7 +366,7 @@ with st.sidebar:
 
     site = next(s for s in SITES if s["site"] == selected_site_name)
 
-    st.caption(f"Lat/Lon: {site['lat']:.1f}, {site['lon']:.1f}")
+    #st.caption(f"Lat/Lon: {site['lat']:.1f}, {site['lon']:.1f}")
 
     LAIs=["low","high"]
     selected_LAI = st.selectbox("Select LAI", LAIs)
@@ -399,6 +406,8 @@ with st.sidebar:
     if wl_choice == "ALL":
         hide_bad_wl = st.checkbox("Hide 945.1?",value=False)
 
+    st.divider()
+    
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
 
@@ -406,17 +415,21 @@ with st.sidebar:
     "TRUTHS radiometric accuracy (%)",
     min_value=0.1,
     max_value=5.0,
-    value=1.0,
-    step=0.1
+    #value=1.0,
+    step=0.1,
+    key="truths_acc"
     )
  
     alpha = st.slider(
     "Improvement to Sentinel (X)",
     min_value=1.0,
     max_value=10.0,
-    value=1.0,
-    step=0.5
+    #value=1.0,
+    step=0.5,
+    key="alpha"
     )
+
+    st.button("Reset to defaults",on_click=reset_acc_defaults)
 
 eps = 1e-3# Avoid σ=0 when reflectance is 0
 rel_err_Sentinel=(1/alpha)*np.array([0.0595,0.0413,0.0349,0.0377,0.0356,0.0335,0.0332,0.0335,0.315,0.0355,0.0357])
