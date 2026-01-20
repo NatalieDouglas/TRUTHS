@@ -407,7 +407,7 @@ with st.sidebar:
         hide_bad_wl = st.checkbox("Hide 945.1?",value=False)
 
     st.divider()
-    
+
     retrievals=["TRUTHS","Sentinel2","TRUTHS+Sentinel2"]
     ret_sel=st.selectbox("Retrieve with:", retrievals)
 
@@ -457,11 +457,16 @@ make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, ref
 # Optional table
 with st.expander("Show data"):
     if wl_choice == "ALL":
+        st.write("Simulated Reflectances:")
+        st.dataframe(df_ref.drop(columns='Unnamed: 0').sort_index())
+        st.write("Simulated Albedos:")
         st.dataframe(df.drop(columns='Unnamed: 0').sort_index())
     else:
         dontkeep = [w for w in wl_cols if w != wl_choice]
+        st.write("Simulated Reflectances:")
+        st.dataframe(df_ref.drop(columns=dontkeep+['Unnamed: 0']).dropna().sort_index())
+        st.write("Simulated Albedos:")
         st.dataframe(df.drop(columns=dontkeep+['Unnamed: 0']).dropna().sort_index())
-
 
 st.divider()
 st.subheader("Sentinel-2 uncertainty settings")
