@@ -233,11 +233,11 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
                 ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
 
     else:
-        w=[wl_col]
-        i = all_wl.index(w[0])
+        w=wl_col
+        i = all_wl.index(w)
         if ret_sel == "TRUTHS":
             #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=float(w[0]),color=colors[i])
-            ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
+            ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=str(w))
         elif ret_sel == "Sentinel2":
             #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=float(w[0]),color=colors[i])
             ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
