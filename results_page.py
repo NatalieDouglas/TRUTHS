@@ -31,7 +31,7 @@ def geom_list_from_brdfFile(b):
 
 def files_for_site(site_slug: str,LAI,PCC):
     site_dir = DATA_DIR / site_slug
-    timestamps_csv = site_dir / (site_slug+"_geometries.csv")
+    timestamps_csv = DATA_DIR / ('geometries/'+site_slug+"_geometries.csv")
     albedos_csv = site_dir / (site_slug+"LAI"+str(LAI)+"PCC"+str(PCC)+"_albedos.csv")
     brfs_csv = site_dir / (site_slug+"LAI"+str(LAI)+"PCC"+str(PCC)+"_BRFs.csv")
     return timestamps_csv, albedos_csv, brfs_csv
@@ -438,11 +438,11 @@ rel_err_TRUTHS=(truths_acc/100)*np.ones(11)
 
 # Inversion
 if ret_sel == "TRUTHS":
-    BRDF_filename= DATA_DIR / ('BRDF_files/TRUTHS/TRUTHSgeometries/TRUTHSgeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
+    BRDF_filename= DATA_DIR / ('BRDF_files/TRUTHSgeometries/TRUTHSgeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
 elif ret_sel == "Sentinel2":
-    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel/SentinelGeometries/SentinelGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
+    BRDF_filename= DATA_DIR / ('BRDF_files/SentinelGeometries/SentinelGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )
 else:
-    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel+TRUTHS/Sentinel+TRUTHSGeometries/Sentinel+TRUTHSGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )  
+    BRDF_filename= DATA_DIR / ('BRDF_files/Sentinel+TRUTHSGeometries/Sentinel+TRUTHSGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf' )  
 
 k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
