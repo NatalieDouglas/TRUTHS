@@ -40,18 +40,19 @@ st.markdown(
 )
 # Example structure — replace values with YOUR spec
 s2_sigma_rows = [
-    {"Band": "B2",  "λ (nm)": 492.4,  "Std dev (reflectance)": 5.95},
-    {"Band":"B3",  "λ (nm)": 559.8,  "Std dev (reflectance)": 4.13},
-    {"Band": "B4", "λ (nm)": 664.6,  "Std dev (reflectance)": 3.49},
-    {"Band":"B5", "λ (nm)": 704.1,  "Std dev (reflectance)": 3.77},
-    {"Band":"B6",  "λ (nm)": 740.5,  "Std dev (reflectance)": 3.56},
-    {"Band": "B7", "λ (nm)": 782.8,  "Std dev (reflectance)": 3.35},
-    {"Band":"B8", "λ (nm)": 832.8,  "Std dev (reflectance)": 3.32},
-    {"Band": "B8A","λ (nm)": 864.7,  "Std dev (reflectance)": 3.35},
-    {"Band":"B9", "λ (nm)": 945.1, "Std dev (reflectance)": 31.5},
-    {"Band":"B11", "λ (nm)": 1613.7, "Std dev (reflectance)": 3.55},
-    {"Band":"B12", "λ (nm)": 2202.4, "Std dev (reflectance)": 3.57},
-]
+        {"Band": "B2",  "λ (nm)": 492.4,  "Std dev (reflectance)": 5.95},
+            {"Band":"B3",  "λ (nm)": 559.8,  "Std dev (reflectance)": 4.13},
+                {"Band": "B4", "λ (nm)": 664.6,  "Std dev (reflectance)": 3.49},
+                    {"Band":"B5", "λ (nm)": 704.1,  "Std dev (reflectance)": 3.77},
+                        {"Band":"B6",  "λ (nm)": 740.5,  "Std dev (reflectance)": 3.56},
+                            {"Band": "B7", "λ (nm)": 782.8,  "Std dev (reflectance)": 3.35},
+                                {"Band":"B8", "λ (nm)": 832.8,  "Std dev (reflectance)": 3.32},
+                                    {"Band": "B8A","λ (nm)": 864.7,  "Std dev (reflectance)": 3.35},
+                                        {"Band":"B9", "λ (nm)": 945.1, "Std dev (reflectance)": 31.5},
+                                            {"Band":"B11", "λ (nm)": 1613.7, "Std dev (reflectance)": 3.55},
+                                                {"Band":"B12", "λ (nm)": 2202.4, "Std dev (reflectance)": 3.57},
+                                                ]
+
 
 s2_sigma_df = pd.DataFrame(s2_sigma_rows)
 s2_sigma_df = s2_sigma_df.reset_index(drop=True)
