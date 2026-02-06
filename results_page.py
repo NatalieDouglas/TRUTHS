@@ -104,30 +104,36 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     BRFs = pd.read_csv(brfs_csv)        
     n_truths = (BRFs["mission"] == "TRUTHS").sum()
     n_sent = (BRFs["mission"] == "Sentinel2").sum()
-    R_TRUTHS=[]
-    R_Sentinel=[]
-    for i in range(0,11):
-        R_TRUTHS.append(np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths)))
-        R_Sentinel.append(np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent)))
+    #R_TRUTHS=[]
+    #R_Sentinel=[]
+    R=[]
+    #for i in range(0,11):
+    #    R_TRUTHS.append(np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths)))
+    #    R_Sentinel.append(np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent)))
     if ret_sel == "TRUTHS": 
         BRFs_mission=BRFs.loc[BRFs["mission"] == "TRUTHS"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = rel_err_TRUTHS * np.maximum(BRFs_mission.values, eps)
-        R=R_TRUTHS.copy()
+        for i in range(0,11):
+            R.append(np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths)))
+        #R=R_TRUTHS.copy()
     elif ret_sel == "Sentinel2":
         BRFs_mission=BRFs.loc[BRFs["mission"] == "Sentinel2"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = rel_err_Sentinel * np.maximum(BRFs_mission.values, eps)
-        R=R_Sentinel.copy()
+        #R=R_Sentinel.copy()
+        for i in range(0,11):
+            R.append(np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent)))
     else:
         BRFs_mission = BRFs.copy()
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = np.zeros_like(BRFs_mission.values, dtype=float)
         sigma_arr[:n_sent] = rel_err_Sentinel * np.maximum(BRFs_mission.values[:n_sent], eps)
         sigma_arr[n_sent:] = rel_err_TRUTHS * np.maximum(BRFs_mission.values[n_sent:], eps)
-        R=[]
         for i in range(0,11):
-            R.append(block_diag(R_TRUTHS[i],R_Sentinel[i]))
+            R_TRUTHS=np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths))
+            R_Sentinel=np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent))
+            R.append(block_diag(R_TRUTHS,R_Sentinel))
         
     rng = np.random.default_rng(42)
     noise = rng.normal(0.0, sigma_arr)
