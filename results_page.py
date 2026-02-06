@@ -8,7 +8,6 @@ from kernels import kernelBRDF
 from dataclasses import dataclass
 from PIL import Image
 from scipy.linalg import block_diag
-from angular_sampling import mk_angluar_sampling_fig
 
 @dataclass
 class geom:
