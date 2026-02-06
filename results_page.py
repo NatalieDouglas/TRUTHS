@@ -8,6 +8,7 @@ from kernels import kernelBRDF
 from dataclasses import dataclass
 from PIL import Image
 from scipy.linalg import block_diag
+from angular_sampling import mk_angluar_sampling_fig
 
 @dataclass
 class geom:
@@ -194,9 +195,44 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     ax2.axis("off")
     ax2.margins(0)
     
-    fig3, ax3 = plt.subplots(figsize=(4, 4))
-    ax3.imshow(Image.open(IMG_DIR / ('polar_plots/'+'angular_sampling_LAT'+str(LAT)+'LON'+str(LON)+'.png')))
-    ax3.axis("off")
+    #truths
+    k=kernelBRDF( )
+    k.readBRDF(DATA_DIR / ('BRDF_files/TRUTHSgeometries/TRUTHSgeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf'))
+    geom_tr=geom_list_from_brdfFile(k)
+        
+    #sentinel 2
+    k=kernelBRDF( )
+    k.readBRDF(DATA_DIR / ('BRDF_files/SentinelGeometries/SentinelGeomsLAT'+str(site["lat"])+'LON'+str(site["lon"])+'.brdf'))
+    geom_s2=geom_list_from_brdfFile(k)
+
+    fig3, ax3 = plt.subplots(figsize=(4, 4), subplot_kw={'projection': 'polar'}, layout='constrained')
+    ax3.set_theta_zero_location("N")
+    ax3.set_theta_direction(-1)
+    ax3.set_rmax(80)
+    
+    ax3.set_rlim(0,80)
+    ax3.set_rticks([20, 40, 60, 80])  # Fewer radial ticks
+    ax3.set_rlabel_position(-22.5)  # Move radial labels away from plotted line
+    ax3.grid(True)
+
+    label="TRUTHS"
+    for g in geom_tr:
+        raa=np.deg2rad(g.saa-g.vaa)
+        ax3.plot(raa,g.sza,"ro",label=label,markersize=3)
+        label=None
+
+    label="S2"
+    for g in geom_s2:
+        raa=np.deg2rad(g.saa-g.vaa)
+        ax3.plot(raa,g.sza,"bo",label=label,markersize=3)
+        label=None
+
+    ax3.legend()
+    ax3.set_title("Angular sampling at LAT = "+str(LAT)+", LON = "+str(LON), va='bottom')
+
+    #fig3, ax3 = plt.subplots(figsize=(4, 4))
+    #ax3.imshow(Image.open(IMG_DIR / ('polar_plots/'+'angular_sampling_LAT'+str(LAT)+'LON'+str(LON)+'.png')))
+    #ax3.axis("off")
 
     fig4, ax4 = plt.subplots(figsize=(4, 4))
 
@@ -300,7 +336,7 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
 
     with col3:
         st.markdown("### ☀️ Solar Zenith Angular Sampling")
-        st.write("The distribution of solar zenith and relative azimuth angles for the available TRUTHS and Sentinel-2 solar and viewing geometries. TRUTHS solar geometries can be seen in red and Sentinel2 in blue.")
+        st.write("The distribution of solar zenith (radial) and relative azimuth (azimuth) angles for the available TRUTHS and Sentinel-2 solar and viewing geometries. TRUTHS solar geometries can be seen in red and Sentinel2 in blue.")
         st.pyplot(fig3)
 
     with col4:

@@ -2,9 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from brdfFile import brdfFile
-from gort import gort, geom
 from kernels import kernelBRDF
-from utils import *
 
 
 def mk_angluar_sampling_fig(geom_tr,geom_s2,latlon,fn=None):
@@ -21,13 +19,6 @@ def mk_angluar_sampling_fig(geom_tr,geom_s2,latlon,fn=None):
     ax.set_rticks([20, 40, 60, 80])  # Fewer radial ticks
     ax.set_rlabel_position(-22.5)  # Move radial labels away from plotted line
     ax.grid(True)
-
-    #label_position=ax.get_rlabel_position()
-    #ax.text(np.radians(label_position+10),ax.get_rmax()/1.5,'Solar Zenith Angle',
-    #    rotation=292.5,ha='center',va='center')
-
-    #checking:
-    #ax.plot(np.deg2rad(45),60,"g*")
 
     label="TRUTHS"
     for g in geom_tr:
