@@ -74,7 +74,6 @@ def load_site_data(timestamps_csv: Path, albedos_csv: Path, reflectances_csv: Pa
     df_ref = pd.concat([ts.reset_index(drop=True), ref.reset_index(drop=True)], axis=1)
     
     # Clean + index
-    #df = df.dropna(subset=["datetime"]).set_index("datetime").sort_index()
     df = df.dropna(subset=["datetime"]).set_index("datetime")
     df_ref = df_ref.dropna(subset=["datetime"]).set_index("datetime")
 
@@ -104,40 +103,27 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     BRFs = pd.read_csv(brfs_csv)        
     n_truths = (BRFs["mission"] == "TRUTHS").sum()
     n_sent = (BRFs["mission"] == "Sentinel2").sum()
-    #R_TRUTHS=[]
-    #R_Sentinel=[]
-    R=[]
-    #for i in range(0,11):
-    #    R_TRUTHS.append(np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths)))
-    #    R_Sentinel.append(np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent)))
+
     if ret_sel == "TRUTHS": 
         BRFs_mission=BRFs.loc[BRFs["mission"] == "TRUTHS"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = rel_err_TRUTHS * np.maximum(BRFs_mission.values, eps)
-        for i in range(0,11):
-            R.append(np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths)))
-        #R=R_TRUTHS.copy()
     elif ret_sel == "Sentinel2":
         BRFs_mission=BRFs.loc[BRFs["mission"] == "Sentinel2"]
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = rel_err_Sentinel * np.maximum(BRFs_mission.values, eps)
-        #R=R_Sentinel.copy()
-        for i in range(0,11):
-            R.append(np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent)))
     else:
         BRFs_mission = BRFs.copy()
         BRFs_mission = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
         sigma_arr = np.zeros_like(BRFs_mission.values, dtype=float)
         sigma_arr[:n_sent] = rel_err_Sentinel * np.maximum(BRFs_mission.values[:n_sent], eps)
         sigma_arr[n_sent:] = rel_err_TRUTHS * np.maximum(BRFs_mission.values[n_sent:], eps)
-        for i in range(0,11):
-            R_TRUTHS=np.diag(rel_err_TRUTHS[i]**2*np.ones(n_truths))
-            R_Sentinel=np.diag(rel_err_Sentinel[i]**2*np.ones(n_sent))
-            R.append(block_diag(R_TRUTHS,R_Sentinel))
-        
+    
+    R=[]
+    for i in range(0,11):
+        R.append(np.diag(sigma_arr.T[i]**2))
     rng = np.random.default_rng(42)
     noise = rng.normal(0.0, sigma_arr)
-    #BRFs_data = BRFs_mission.drop(columns=["mission",'Unnamed: 0'])
     BRFs_data=BRFs_mission.copy()
     band_cols = BRFs_data.columns
     BRFs_data.loc[:, band_cols] = BRFs_mission.values+noise
@@ -158,7 +144,6 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
         kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
     pred_alb=BRFs_mission.copy()
     pred_alb.loc[:, band_cols] = kbs
-    #st.write(pred_alb)
     return BRFs_data, pred_alb, ref_std
 
 def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,ref_std,LAI,PCC,IMG_DIR, LAT,LON,hide):
@@ -176,20 +161,12 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     
     if wl_col == "ALL":
         wl=all_wl
-    #    msize=2
     else:
         wl=[wl_col]
-    #    msize=5
-    
-    #truths = df.loc[df["mission"] == "TRUTHS"]
-    #s2     = df.loc[df["mission"] == "Sentinel2"]
+
     truths = df.loc[df["mission"] == "TRUTHS", wl]
     s2     = df.loc[df["mission"] == "Sentinel2", wl]
-    #both = df[wl]
-    #pred_alb_wl = pred_alb[wl]
-    
 
-    #fig, axes = plt.subplots(2,2, figsize=(12, 10))
     fig1, ax1 = plt.subplots(figsize=(4, 4))
     ax1.imshow(Image.open(IMG_DIR / ('mapLAT'+str(int(LAT))+'LON'+str(LON)+'.png')))
     ax1.axis("off")
@@ -235,10 +212,6 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     ax3.legend()
     ax3.set_title("Angular sampling at LAT = "+str(LAT)+", LON = "+str(LON), va='bottom')
 
-    #fig3, ax3 = plt.subplots(figsize=(4, 4))
-    #ax3.imshow(Image.open(IMG_DIR / ('polar_plots/'+'angular_sampling_LAT'+str(LAT)+'LON'+str(LON)+'.png')))
-    #ax3.axis("off")
-
     fig4, ax4 = plt.subplots(figsize=(4, 4))
 
     if wl_col == "ALL":
@@ -264,27 +237,21 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     if wl_col == "ALL":
         for i,w in enumerate(hide_wl):
             if ret_sel == "TRUTHS":
-                #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=w,color=colors_hide[i])
                 ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
             elif ret_sel == "Sentinel2":
-                #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=w,color=colors_hide[i])
                 ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
             else:
-                #ax5.scatter(df1[w],pred_ref[w],label=w,color=colors_hide[i])
                 ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
 
     else:
         w=wl_col
         i = all_wl.index(w)
         if ret_sel == "TRUTHS":
-            #ax5.scatter(df1.loc[df1["mission"] == "TRUTHS", w],pred_ref[w],label=float(w[0]),color=colors[i])
             ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=str(w))
         elif ret_sel == "Sentinel2":
-            #ax5.scatter(df1.loc[df1["mission"] == "Sentinel2", w],pred_ref[w],label=float(w[0]),color=colors[i])
             ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
 
         else:
-            #ax5.scatter(df1[w],pred_ref[w],label=float(w[0]),color=colors[i])
             ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
 
     xlims=ax5.get_xlim()
@@ -407,8 +374,6 @@ with st.sidebar:
 
     site = next(s for s in SITES if s["site"] == selected_site_name)
 
-    #st.caption(f"Lat/Lon: {site['lat']:.1f}, {site['lon']:.1f}")
-
     LAIs=["low","high"]
     selected_LAI = st.selectbox("Select LAI", LAIs)
 
@@ -456,7 +421,6 @@ with st.sidebar:
     "TRUTHS radiometric accuracy (%)",
     min_value=0.1,
     max_value=5.0,
-    #value=1.0,
     step=0.1,
     key="truths_acc"
     )
@@ -465,7 +429,6 @@ with st.sidebar:
     "Improvement to Sentinel (X)",
     min_value=1.0,
     max_value=10.0,
-    #value=1.0,
     step=0.5,
     key="alpha"
     )
@@ -474,7 +437,6 @@ with st.sidebar:
 
 eps = 1e-3# Avoid σ=0 when reflectance is 0
 rel_err_Sentinel=(1/alpha)*np.array([0.0595,0.0413,0.0349,0.0377,0.0356,0.0335,0.0332,0.0335,0.315,0.0355,0.0357])
-#rel_err_TRUTHS=alpha*rel_err_Sentinel
 rel_err_TRUTHS=(truths_acc/100)*np.ones(11)
 
 # Inversion
@@ -493,7 +455,6 @@ predicted_refs, predicted_albedos, ref_std=get_pred_albs(brfs_csv,k,ret_sel,rel_
 
 # Plot
 make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, ref_std, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
-#st.pyplot(fig, clear_figure=True)
 
 # Optional table
 with st.expander("Show data"):
@@ -529,11 +490,8 @@ s2_sigma_rows = [
 
 s2_sigma_df = pd.DataFrame(s2_sigma_rows)
 s2_sigma_df = s2_sigma_df.reset_index(drop=True)
-# Make it look tidy
 s2_sigma_df["λ (nm)"] = s2_sigma_df["λ (nm)"].map(lambda x: f"{x:.1f}")
 s2_sigma_df["Std dev (default)"] = s2_sigma_df["Std dev (default)"].map(lambda x: f"{x:.2f}")
 s2_sigma_df["Std dev (updated)"] = s2_sigma_df["Std dev (updated)"].map(lambda x: f"{x:.3f}")
 
-# Static table (won’t change/scroll like dataframe)
-#s2_sigma_df = s2_sigma_df.reset_index(drop=True)
 st.table(s2_sigma_df)
