@@ -221,8 +221,19 @@ class kernelBRDF( brdfFile ):
       work2=np.linalg.inv(np.dot(work1,K))
       work3=np.dot(work2,work1)
       KW.append(np.dot(work3,self.getObs(i)))
-                  
-    return np.array( KW ),np.array( K )
+    
+    KA=[]
+    g0k=[1.0, -0.007574, -1.284909]
+    g1k=[0.0, -0.070987, -0.166314]
+    g2k=[0.0,  0.307588,  0.041840]
+    for i in range( self.nAngles ):
+        sza=self.dtor( self.sza_arr[i] )
+        KA_0=g0k[0]+g1k[0]*sza*sza+g2k[0]*sza*sza*sza
+        KA_1=g0k[1]+g1k[1]*sza*sza+g2k[1]*sza*sza*sza
+        KA_2=g0k[2]+g1k[2]*sza*sza+g2k[2]*sza*sza*sza
+        KA.append([KA_0,KA_1,KA_2])
+    
+    return np.array( KW ), np.array( K ), np.array( KA )
 
 #  def WeightsOfDetermination( self, filename=None, obserr ):
 #    K = self.kernelMatrix( filename )
@@ -251,7 +262,7 @@ class kernelBRDF( brdfFile ):
             a+=kw[i,j]*aW[j]    
     
         alb.append(a)  
-      
+
     return alb
 
 
@@ -278,7 +289,8 @@ class kernelBRDF( brdfFile ):
             a+=kw[i,j]*(g0k[j]+g1k[j]*sza*sza+g2k[j]*sza*sza*sza)    
     
         alb.append(a)  
-      
+
+
     return alb
 
   def predict_brfs( self, kw ):

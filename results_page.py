@@ -129,22 +129,27 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     BRFs_data.loc[:, band_cols] = BRFs_mission.values+noise
     
     k=add_obs_brfs_to_kernelBRDF(BRFs_data.values,k)
-    weights,K=k.solveKernelBRDF(R)
+    weights,K,KA=k.solveKernelBRDF(R)
     k.predict_brfs(weights)
     
-    # get standard deviations
-    ref_std=[]
-    for i in range(0,11):
-        work0=np.dot(K.T,np.dot(np.linalg.inv(R[i]),K))
-        ref_cov=np.dot(np.dot(K,np.linalg.inv(work0)),K.T)
-        ref_std.append(np.sqrt(np.diag(ref_cov)))
-    
+    #get predicted black sky albedos:
     kbs=[]
     for i in range(len(k.sza_arr)):
         kbs.append(k.predictBSAlbedoRTkLSp(weights,k.sza_arr[i]))
     pred_alb=BRFs_mission.copy()
     pred_alb.loc[:, band_cols] = kbs
-    return BRFs_data, pred_alb, ref_std
+
+    # get reflectance and albedo standard deviations
+    ref_std=[]
+    alb_std=[]
+    for i in range(0,11):
+        work0=np.dot(K.T,np.dot(np.linalg.inv(R[i]),K))
+        ref_cov=np.dot(np.dot(K,np.linalg.inv(work0)),K.T)
+        alb_cov=np.dot(np.dot(KA,np.linalg.inv(work0)),KA.T)
+        ref_std.append(np.sqrt(np.diag(ref_cov)))
+        alb_std.append(np.sqrt(np.diag(alb_cov)))
+    
+    return BRFs_data, pred_alb, ref_std, alb_std
 
 def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,ref_std,LAI,PCC,IMG_DIR, LAT,LON,hide):
     
@@ -451,7 +456,7 @@ k=kernelBRDF( )
 k.readBRDF(BRDF_filename)
 geom_list=geom_list_from_brdfFile(k)
 
-predicted_refs, predicted_albedos, ref_std=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
+predicted_refs, predicted_albedos, ref_std, alb_std=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
 make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, ref_std, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
