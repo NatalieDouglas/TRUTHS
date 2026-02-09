@@ -151,7 +151,7 @@ def get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS):
     
     return BRFs_data, pred_alb, ref_std, alb_std
 
-def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,ref_std,LAI,PCC,IMG_DIR, LAT,LON,hide):
+def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred_alb,ref_std,alb_std,LAI,PCC,IMG_DIR, LAT,LON,hide):
     
     colors = ["blue","orange","green","red","purple","brown","pink","olive","gray","cyan","gold"]
 
@@ -255,7 +255,6 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
             ax5.errorbar(x=df1.loc[df1["mission"] == "TRUTHS", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=str(w))
         elif ret_sel == "Sentinel2":
             ax5.errorbar(x=df1.loc[df1["mission"] == "Sentinel2", w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
-
         else:
             ax5.errorbar(x=df1[w],y=pred_ref[w],yerr=ref_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
 
@@ -273,20 +272,28 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
     if wl_col == "ALL":
         for i,w in enumerate(hide_wl):
             if ret_sel == "TRUTHS":
-                ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors_hide[i])
+                ax6.errorbar(x=df.loc[df["mission"] == "TRUTHS", w],y=pred_alb[w],yerr=alb_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
+                #ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=w,color=colors_hide[i])
             elif ret_sel == "Sentinel2":
-                ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors_hide[i])
+                #ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=w,color=colors_hide[i])
+                ax6.errorbar(x=df.loc[df["mission"] == "Sentinel2", w],y=pred_alb[w],yerr=alb_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
             else:
-                ax6.scatter(df[w],pred_alb[w],label=w,color=colors_hide[i])
+                #ax6.scatter(df[w],pred_alb[w],label=w,color=colors_hide[i])
+                ax6.errorbar(x=df[w],y=pred_alb[w],yerr=alb_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors_hide[i],label=float(w))
+
     else:
         w=[wl_col]
         i = all_wl.index(w[0])
         if ret_sel == "TRUTHS":
-            ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=float(w[0]),color=colors[i])
+            #ax6.scatter(df.loc[df["mission"] == "TRUTHS", w],pred_alb[w],label=float(w[0]),color=colors[i])
+            ax6.errorbar(x=df.loc[df["mission"] == "TRUTHS", w],y=pred_alb[w],yerr=alb_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=str(w))
         elif ret_sel == "Sentinel2":
-            ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=float(w[0]),color=colors[i])
+            #ax6.scatter(df.loc[df["mission"] == "Sentinel2", w],pred_alb[w],label=float(w[0]),color=colors[i])
+            ax6.errorbar(x=df.loc[df["mission"] == "Sentinel2", w],y=pred_alb[w],yerr=alb_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
         else:
-            ax6.scatter(df[w],pred_alb[w],label=float(w[0]),color=colors[i])
+            #ax6.scatter(df[w],pred_alb[w],label=float(w[0]),color=colors[i])
+            ax6.errorbar(x=df[w],y=pred_alb[w],yerr=alb_std[i],fmt="o",capsize=1,elinewidth=0.5,color=colors[i],label=float(w))
+
     xlims=ax6.get_xlim()
     ylims=ax6.get_ylim()
     ax6.plot([0,1],[0,1],"--")
@@ -325,12 +332,12 @@ def make_plots(df: pd.DataFrame, df1: pd.DataFrame, wl_col, all_wl,pred_ref,pred
 
     with col5:
         st.markdown("### 📈 Inversion ")
-        st.write("Simulated GORT reflectances versus the reflectances retrieved from the inversion of the Ross-Thick Li-Sparse linear kernels model.")
+        st.write("Simulated GORT reflectances versus the reflectances retrieved from the inversion of the Ross-Thick Li-Sparse linear kernels model. Vertical error bars show standard deviation propagated through the linear inversion.")
         st.pyplot(fig5)
 
     with col6:
         st.markdown("### ✨ Albedos ")
-        st.write("Simulated GORT black sky albedos versus simulated albedos using the Ross-Thick Li-Sparse linear kernels model.")
+        st.write("Simulated GORT black sky albedos versus simulated albedos using the Ross-Thick Li-Sparse linear kernels model. Vertical error bars show the propogation of standard deviation through the albedo retrievals.")
         st.pyplot(fig6)
     return 
 
@@ -459,7 +466,7 @@ geom_list=geom_list_from_brdfFile(k)
 predicted_refs, predicted_albedos, ref_std, alb_std=get_pred_albs(brfs_csv,k,ret_sel,rel_err_Sentinel,rel_err_TRUTHS)
 
 # Plot
-make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, ref_std, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
+make_plots(df,df_ref, wl_choice, wl_cols, predicted_refs, predicted_albedos, ref_std, alb_std, LAI,PCC,IMG_DIR,site["lat"],site["lon"],hide_bad_wl)
 
 # Optional table
 with st.expander("Show data"):
