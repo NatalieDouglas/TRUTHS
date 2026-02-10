@@ -1,0 +1,416 @@
+/*
+A front end to Nadine Gobron's CRM (NADIM).
+
+It is coupled with PROSPECT to provide leaf spectra and it 
+uses Price's EOFs to describe soil colour.
+
+The looping structure has been wrapped around so that the
+code can operate in a similar manner to Mat's implimentation
+of Kuusk's CRM.
+
+Nadine's original code has not been altered in anyway in
+this model.
+*/
+
+
+
+
+
+/*
+============================================
+             Variable names
+============================================
+
+NADIM:
+-----
+
+xrs = soil albedo
+xhc = canopy height
+xlai = LAI
+rpl = leaf radius
+xrl = leaf reflectance
+xtl = leaf transmitance
+
+lad = leaf angle distribution:
+			1 - Planophile
+			2 - Erectophile
+			3 - Plagiophile
+			4 - Extremophile
+			5 - Uniform
+
+
+PROSPECT:
+--------
+
+vai = leaf structure
+cab = leaf chlorophyll
+cw = leaf water equivelent thickness
+cp = protein concentration
+cc = cellulose and lignin
+
+
+PRICE:
+-----
+
+soil_vector_N = the Nth spectral vector of the soil reflectance
+rslN = the weight of the Nth vector
+
+
+NB - the default values of the parameters for PROSPECT and PRICE
+     are taken from Mat's kuusk code.
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "nadim.h"
+#include "soil_rho.h"
+
+
+
+char	get_first_string_token( line, token )
+char	*line;
+char	*token;
+{
+
+	int	i=0, j=0;
+
+	/* Check that we are not already */
+	/* at the end of the line        */
+
+	if( *line == '\0' ) return( 0 );
+	
+	/* Skip leading white space and */
+	/* return zero if end of string */
+	/* is encountered               */
+	
+	while( isspace( *(line+i) ) ) 
+		if( *(line+( ++i )) == '\0' ) return( 0 );
+	
+	
+	/* Put the first block of non white 
+	   space characters into element */
+	
+	while( ! isspace( *(line+i) ) ){
+		if( ( token[j++] = *(line+(i++) ) ) == '\0' ){
+		
+			*line = '\0';
+			return( 1 );
+		
+		}
+	}
+	
+	
+	/*put a NULL terminator in at j - (*) */
+	
+	token[ j ] = '\0' ;
+	
+	/* Copy remainder of line into the beggining */
+	/* of itself */
+	
+	for( j=0; ( *(line+j)=*(line+i) ) != '\0' ; ++j, ++i );
+	
+	
+	
+	return( 1 );
+
+}
+
+
+void usage( char *bin_name )
+{
+
+
+	fprintf( stderr, "usage: %s [options] < angles.dat\n\n", bin_name );
+	fprintf( stderr, "The first line of the input data reads:\nN M W_1 W_2 [...] W_M\n"  );
+	fprintf( stderr, "where N is the number of view--illumination geometries\nM is the number of wavelengths and\n"  );
+	fprintf( stderr, "W_x are the wavelengths at which to predict the canopy reflectance\n"  );
+	fprintf( stderr, "The rest of the input data is four columns of ascii:\nview_zenith view_azimuth solar_zenith solar azimuth\n\n"  );
+	fprintf( stderr, "The options are:\n"  );
+	fprintf( stderr, "-LAI arg\tset the leaf area index to arg\n"  );
+	fprintf( stderr, "-lrad arg\tset the leaf radius to arg\n"  );
+	fprintf( stderr, "-hc arg \tset the canopy height to arg\n"  );
+	fprintf( stderr, "-rl arg \tset the leaf reflectance to arg (turns prospect OFF)\n"  );
+	fprintf( stderr, "-tl arg \tset the leaf transmitance to arg (turns prospect OFF)\n"  );
+	fprintf( stderr, "-rs arg \tset the soil albedo to arg (turns price soil reflectance OFF)\n"  );
+	fprintf( stderr, "-lad arg\twhere arg is an int specifying the leaf angle distribution:\n"  );
+	fprintf( stderr, "\t\t\t1 - Planophile\n"  );
+	fprintf( stderr, "\t\t\t2 - Erectophile\n"  );
+	fprintf( stderr, "\t\t\t3 - Plagiophile\n"  );
+	fprintf( stderr, "\t\t\t4 - Extremeophile\n"  );
+	fprintf( stderr, "\t\t\t5 - Uniform\n"  );	
+	fprintf( stderr, "-N arg\tset the leaf structure variable to arg\n"  );
+	fprintf( stderr, "-cab arg\tset the leaf chlorophyl concentration to arg\n"  );
+	fprintf( stderr, "-cw arg \tset the equivelant leaf water thickness to arg\n"  );
+	fprintf( stderr, "-cc arg \tset the celulose concentration to arg\n"  );
+	fprintf( stderr, "-cp arg \tset the protein to arg\n"  );
+	fprintf( stderr, "-rsl1 arg \tset the weight of the first soil vector to arg\n"  );
+	fprintf( stderr, "-rsl2 arg \tset the weight of the first soil vector to arg\n"  );
+	fprintf( stderr, "-rsl3 arg \tset the weight of the first soil vector to arg\n"  );
+	fprintf( stderr, "-rsl4 arg \tset the weight of the first soil vector to arg\n"  );
+	fprintf( stderr, "-albedo \toutput the (spectral) albedo after the reflectance data\n"  );
+	fprintf( stderr, "-fapar  \toutput the fraction of radiation absorbed by the canopy after the reflectance data\n"  );
+	fprintf( stderr, "-trans  \toutput the (spectral) transmission after the reflectance data\n"  );
+	fprintf( stderr, "[N.B. if more than one of the options albedo,fapar,trans the are output in the order: fapar albedo trans]\n"  );	
+	fprintf( stderr, "[N.B. fapar is of course not fAPAR in this case - its the fraction of absorbed MONOSPECTRAL radiation]\n"  );	
+	fprintf( stderr, "-u      \tprint this message\n"  );
+
+
+}
+
+
+int main( int argc, char **argv )
+{
+
+
+	char line[ MAX_LINE_LEN ], tmp_str1[ MAX_LINE_LEN ], out_head[ MAX_LINE_LEN ];
+	int nv=0,i, nv_check, nw=0, nw_check, a, w ;
+	float theta_v[NANGLES], phi_v[NANGLES]; 
+	float theta_i[NANGLES], phi_i[NANGLES]; 
+	float brf[NANGLES][NWAVELS], wavelength[NWAVELS];
+	float	xrs=0.1, xhc=5.0, xlai=4.0, rpl=0.1, xrl=0.45, xtl=0.5;
+	int 	lad=2;
+
+	void	cl_parser( argc, argv, xrs, xhc, xlai, rpl, xrl, xtl, lad,
+									p_vai, p_cab, p_cw, p_cp, p_cc, use_prospect,
+									rsl1, rsl2, rsl3, rsl4, use_price, 
+									do_fapar, do_albedo, do_trans );
+
+	/*for prospect*/
+
+	double p_vai=1.0, p_cab=75.0, p_cw=0.01, p_cp=0.001, p_cc=0.001, p_r, p_t ;
+	int use_prospect=1;
+
+	/*for price*/
+
+	float *soil_vector_1, *soil_vector_2, *soil_vector_3, *soil_vector_4 ;
+	float rsl1=0.2, rsl2=0.1, rsl3=0.03726, rsl4=-0.002426 ;
+	int use_price=1 ;
+	
+	/*energy subroutine vars*/
+ 	float fapar[NANGLES][NWAVELS], albedo_sys[NANGLES][NWAVELS], trans_total[NANGLES][NWAVELS] ;
+	int	do_fapar = 0, do_albedo = 0, do_trans = 0  ;
+
+	/*get command line options*/ 
+
+	cl_parser( argc, argv, &xrs, &xhc, &xlai, &rpl, &xrl, &xtl, &lad,
+			 &p_vai, &p_cab, &p_cw, &p_cp, &p_cc, &use_prospect, &rsl1, &rsl2, &rsl3, &rsl4, &use_price,
+			  &do_fapar, &do_albedo, &do_trans );
+				
+	/*read the input data*/
+	
+	/*read the number of angles, number of 
+	wavelengths and the actual wavelengths*/
+	if( fgets( line, MAX_LINE_LEN, stdin ) == NULL ){
+	
+		fprintf( stderr, "%s: error reading data on stdin\n", *argv );
+		fprintf( stderr, "%s: \n", line );
+		exit( EXIT_FAILURE );
+	
+	}
+	
+	strcpy( out_head, line );
+	
+	if( get_first_string_token( line, tmp_str1 ) == 0 ){
+		fprintf( stderr, "%s: error reading number of angles from line 1\n", *argv );
+		exit( EXIT_FAILURE );
+	}
+	
+	nv_check = atoi( tmp_str1 );
+	
+	
+	if( get_first_string_token( line, tmp_str1 ) == 0 ){
+		fprintf( stderr, "%s: error reading number of wavebands from line 1\n", *argv );
+		exit( EXIT_FAILURE );
+	}
+
+		
+	nw_check = atoi( tmp_str1 );
+	
+	
+	while( get_first_string_token( line, tmp_str1 ) ){
+	
+		wavelength[ nw++ ] = atof( tmp_str1 );
+	
+	}
+	
+	if( nw_check != nw ){
+		fprintf( stderr, "%s: expected number of wavelengths (%d) does not match with number found (%d)\n", *argv, nw_check, nw );
+		exit( EXIT_FAILURE );
+	}
+
+	
+	
+	/*read the angles in*/
+	while( fgets( line, MAX_LINE_LEN, stdin ) != NULL ){
+	
+		if( sscanf( line, "%f %f %f %f", &theta_v[nv], &phi_v[nv], &theta_i[nv], &phi_i[nv] ) != 4 ){
+			fprintf( stderr, "%s: error on input, line %d\n", *argv, nv+1 );
+			exit( EXIT_FAILURE );
+		}
+		nv++;
+	
+	}
+
+	if( nv_check != nv ){
+		fprintf( stderr, "%s: expected number of angles (%d) does not match with number found (%d)\n", *argv, nv_check, nv );
+		exit( EXIT_FAILURE );
+	}
+
+	i=1;	
+
+	/*
+	Loop over wavelenghts
+	*/
+
+	for( w=0; w<nw; w++ ){
+	
+		/*
+		Get leaf reflectances if required
+		*/
+	
+		if( use_prospect ){
+			prospect_monochromatic( wavelength[w], p_vai, p_cab, p_cw, p_cp, p_cc, &p_r, &p_t );	
+			xrl=p_r;
+			xtl=p_t;
+		}
+
+
+		/*
+		Get soil reflectances if required
+		*/
+
+		if( use_price ){
+		
+			soil_vector_1 = default_soil_vector_1 ;
+			soil_vector_2 = default_soil_vector_2 ;
+			soil_vector_3 = default_soil_vector_3 ;
+			soil_vector_4 = default_soil_vector_4 ;
+			price_soil_monochromatic( wavelength[w], rsl1, rsl2, rsl3, rsl4, soil_vector_1, 
+		                              soil_vector_2, soil_vector_3, soil_vector_4, &xrs );	
+		
+		}		
+		
+		/*
+		Loop over angles
+		*/
+		
+		for( a=0; a<nv; a++ ){
+		
+			/*call the FORTRAN routine*/	
+			
+
+			
+			if( do_fapar || do_albedo || do_trans ){
+			 
+			 nadimbrfe_( &theta_i[a], &phi_i[a], &i , &theta_v[a], &phi_v[a], &lad, &xrs, &xhc,       
+			    &xlai, &rpl, &xrl, &xtl, &brf[a][w], &fapar[a][w], &albedo_sys[a][w], &trans_total[a][w] ) ;
+			
+			}else{
+			
+				 nadimbrf_(&theta_i[a], &phi_i[a], &i , &theta_v[a], &phi_v[a], &lad, &xrs, &xhc,       
+			    &xlai, &rpl, &xrl, &xtl, &brf[a][w]);
+					
+			}
+
+		}
+
+	}
+
+	/*print results*/
+	
+	printf( "%s", out_head );
+
+	for( a=0; a<nv; a++ ){ /*angles*/
+
+		printf( "%f %f %f %f", theta_v[a], phi_v[a], theta_i[a], phi_i[a] );
+		
+		for( w=0; w<nw; w++ ){ /*wavelengths*/
+	
+			printf( " %f", brf[a][w]);
+	
+		}
+		
+		
+		if( do_fapar  ) for( w=0; w<nw; w++ ) printf( " %0.10f", fapar[a][w] );
+		if( do_albedo ) for( w=0; w<nw; w++ ) printf( " %0.10f", albedo_sys[a][w] );
+		if( do_trans  ) for( w=0; w<nw; w++ ) printf( " %0.10f", trans_total[a][w] );
+		
+		printf( "\n" );
+	}
+	
+
+	return( EXIT_SUCCESS ) ;
+
+}
+
+
+
+void cl_parser( int argc, char **argv,float *xrs,float *xhc,float *xlai,float *rpl,float *xrl,float *xtl,int *lad,
+					       double *p_vai,double *p_cab,double *p_cw,double *p_cp,double *p_cc,int *use_prospect,
+								float *rsl1,float *rsl2,float *rsl3,float *rsl4, int *use_price, 
+		int *do_fapar,int *do_albedo, int *do_trans		 ){
+
+	int i;
+	void usage(char *bin_name );
+	
+	for( i=1; i<argc; i++ ){
+
+
+		if( *argv[ i ] == '-' ){
+		
+			/**/ if( !strncasecmp( argv[ i ], "-lad", 4 ) )   *lad     = atoi( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-LAI", 4 ) )   *xlai    = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-hc", 3 ) )    *xhc     = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-rl", 3 ) )  { *xrl     = atof( argv[ ++i ] ); *use_prospect=0; }
+			else if( !strncasecmp( argv[ i ], "-tl", 3 ) )  { *xtl     = atof( argv[ ++i ] ); *use_prospect=0; }
+			else if( !strncasecmp( argv[ i ], "-lrad", 3 ) )  *rpl     = atof( argv[ ++i ] ); 
+			
+			/*output opts*/
+			else if( !strncasecmp( argv[ i ], "-albedo", 5 ) )  *do_albedo = 1; 
+			else if( !strncasecmp( argv[ i ], "-fapar", 5  ) )  *do_fapar  = 1; 
+			else if( !strncasecmp( argv[ i ], "-trans", 5  ) )  *do_trans  = 1; 
+			
+			/*prospect*/
+			else if( !strncasecmp( argv[ i ], "-N", 2 ) )   *p_vai     = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-cab", 4 ) ) *p_cab     = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-cw", 3 ) )  *p_cw      = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-cp", 3 ) )  *p_cp      = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-cc", 3 ) )  *p_cc      = atof( argv[ ++i ] ); 
+
+			/*price*/
+			else if( !strncasecmp( argv[ i ], "-rsl1", 5 ) )  *rsl1    = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-rsl2", 5 ) )  *rsl2    = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-rsl3", 5 ) )  *rsl3    = atof( argv[ ++i ] ); 
+			else if( !strncasecmp( argv[ i ], "-rsl4", 5 ) )  *rsl4    = atof( argv[ ++i ] ); 
+
+			else if( !strncasecmp( argv[ i ], "-rs", 3 ) )  { *xrs     = atof( argv[ ++i ] ); *use_price=0;    } 
+			
+			else if( !strncasecmp( argv[ i ], "-u", 2 ) ){  usage( argv[ 0 ] ); exit( EXIT_SUCCESS ) ; }
+			
+			else{
+			
+				fprintf( stderr, "%s: unknown option on command line: %s\n", argv[ 0 ], argv[ i ] );
+				fprintf( stderr, "(use the option -u to see brief usage instructions)\n" );
+				exit( EXIT_FAILURE );
+
+			}
+
+		}else{
+		
+			fprintf( stderr, "%s: unknown argument on command line: %s\n", argv[ 0 ], argv[ 1 ] );
+			fprintf( stderr, "(use the option -u to see brief usage instructions)\n" );
+			exit( EXIT_FAILURE );
+		
+		}
+
+	}
+
+	return ;
+
+}
+
