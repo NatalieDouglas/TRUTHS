@@ -10,3 +10,11 @@ into full complex land surface models such as JULES.
 
 The Python files used in both Phases of the project can be found in the TRUTH_python_files folder. The files used to create the StreamLit application for displaying all Phase 1 results 
 (https://truthsdirtt.streamlit.app/) are in the main folder.
+
+The scripts of code required to run the GORT model (Phase 1), the Ross-Thick Li-Sparse kernel model (Phase 1), the Semi-Discrete model (Phase 2) and to apply the 4DEnVar data assimilation technique (Phase 2) are all background IP. The remaining code was produced for the purposes of this project.
+
+The GORT and the Semi-Discrete model codes are written in C and Fortran respectively and must first be compiled (using the make command). The rest of the code in this project was written in Python so the GORT and Semi-Discrete models both required Python wrappers for implementation.
+
+Code for the GORT model can be accessed at: https://github.com/tquaife/gort
+
+Code for the Semi-Discrete model can be accessed at: https://fapar.jrc.ec.europa.eu/_www/models.php
